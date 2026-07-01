@@ -1,0 +1,6 @@
+# Stray root-level venv (if present)
+/.venv/
+
+# OS files
+.DS_Store
+Thumbs.db

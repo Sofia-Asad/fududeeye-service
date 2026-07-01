@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --bg: #f4f6fc;
+  --surface: #ffffff;
+  --surface-2: #f0f3fa;
+  --text: #0f1d42;
+  --muted: #5a6b8a;
+  --divider: #dde2ef;
+  /* brand accent — gold */
+  --accent: #f9a800;
+  --accent-fg: #1d3480;
+  --accent-weak: #fff8e6;
+  --accent-dark: #c07800;
+  /* navy info tint (replaces old blue badge system) */
+  --navy: #1d3480;
+  --navy-weak: #e8ecf5;
+  /* semantic */
+  --success: #1f7a4d;
+  --success-bg: #e7f4ec;
+  --warning: #b45309;
+  --warning-bg: #fbf0e0;
+  --danger: #b3261e;
+  --danger-bg: #fbe9e7;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(15,29,66,.10), 0 1px 2px rgba(15,29,66,.06);
+  /* sidebar — brand navy */
+  --sidebar-bg: #1d3480;
+  --sidebar-fg: #ffffff;
+  --sidebar-muted: #8ca4d4;
+  --sidebar-text: #9db4da;
+  --sidebar-active-bg: rgba(249,168,0,.15);
+  --sidebar-active-text: #ffffff;
+  --sidebar-accent: #f9a800;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
