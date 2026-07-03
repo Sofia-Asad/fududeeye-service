@@ -2,43 +2,32 @@
 Management command: recalculate_sale_profits
 ============================================
 
-Recalculates owner_payout_amount and company_profit for every Sale row
-using the same arithmetic as Sale._compute_and_persist().
+Audits owner_payout_amount and company_profit for every Sale row using the
+model-owned arithmetic from Sale.calculate_financials().
 
-Run AUDIT first (no changes written):
+Run:
 
     python manage.py recalculate_sale_profits --dry-run
 
-Then apply after reviewing the output:
-
-    python manage.py recalculate_sale_profits
-
 Exits non-zero if any row was (or would be) corrected, so CI can detect
 accidental drift. Exits 0 when every row is already correct.
+
+This command never writes corrections. Sale money fields are historical,
+locked values; reviewed data repair must happen through an explicit migration
+or maintenance script with business sign-off.
 """
-from decimal import Decimal
 from django.core.management.base import BaseCommand
-from django.db import transaction
-
-
-ZERO = Decimal('0.00')
 
 
 def _expected(sale):
-    """Return (expected_payout, expected_profit) for a Sale, mirroring _compute_and_persist."""
-    item = sale.item
-    if item.owner_type == 'CONSIGNMENT':
-        payout = item.owner_asking_price * sale.quantity_sold
-        profit = sale.sale_price - payout
-    else:  # COMPANY
-        payout = ZERO
-        profit = sale.sale_price - (item.cost_price * sale.quantity_sold)
+    """Return (expected_payout, expected_profit) using the Sale model's formula."""
+    payout, profit, _payout_status = sale.calculate_financials(sale.item)
     return payout, profit
 
 
 class Command(BaseCommand):
     help = (
-        'Audit and (optionally) repair owner_payout_amount and company_profit '
+        'Audit owner_payout_amount and company_profit '
         'on Sale rows whose stored values diverge from the source-of-truth formula.'
     )
 
@@ -47,17 +36,14 @@ class Command(BaseCommand):
             '--dry-run',
             action='store_true',
             default=False,
-            help='Print what would change without writing anything to the database.',
+            help='Kept for backwards compatibility; this command is always audit-only.',
         )
 
     def handle(self, *args, **options):
         from apps.sales.models import Sale  # local import avoids circular at module load
 
-        dry_run = options['dry_run']
-        mode_label = 'DRY-RUN (no changes written)' if dry_run else 'APPLY'
-
         self.stdout.write(self.style.MIGRATE_HEADING(
-            f'\n=== recalculate_sale_profits  [{mode_label}] ==='
+            '\n=== recalculate_sale_profits  [AUDIT ONLY - no changes written] ==='
         ))
 
         sales = (
@@ -118,29 +104,8 @@ class Command(BaseCommand):
                 f"  #{c['pk']:<7} {payout_arrow}    {profit_arrow}  {flag}"
             )
 
-        # ── apply ──────────────────────────────────────────────────────────────
-        if dry_run:
-            self.stdout.write(self.style.WARNING(
-                f'\n  DRY-RUN: {len(corrections)} row(s) would be corrected. '
-                'Re-run without --dry-run to apply.'
-            ))
-            # Exit with code 1 to make drift detectable in scripts / CI
-            raise SystemExit(1)
-
-        self.stdout.write('')
-        with transaction.atomic():
-            for c in corrections:
-                Sale.objects.filter(pk=c['pk']).update(
-                    owner_payout_amount=c['exp_payout'],
-                    company_profit=c['exp_profit'],
-                )
-                self.stdout.write(
-                    f"  Corrected Sale #{c['pk']}: "
-                    f"payout {c['stored_payout']} -> {c['exp_payout']}, "
-                    f"profit {c['stored_profit']} -> {c['exp_profit']}"
-                )
-
-        self.stdout.write(self.style.SUCCESS(
-            f'\n  Applied {len(corrections)} correction(s) inside a single transaction.'
+        self.stdout.write(self.style.WARNING(
+            f'\n  AUDIT ONLY: {len(corrections)} row(s) require reviewed data repair. '
+            'No changes were written.'
         ))
-        raise SystemExit(1)   # non-zero: rows were corrected (drift existed)
+        raise SystemExit(1)   # non-zero: drift exists

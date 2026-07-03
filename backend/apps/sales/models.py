@@ -59,6 +59,19 @@ class Sale(AuditedModel):
     def __str__(self):
         return f"Sale #{self.pk} — {self.item} × {self.quantity_sold}"
 
+    def calculate_financials(self, item=None):
+        """Return the locked creation-time payout, profit, and payout status."""
+        item = item or self.item
+        if item.owner_type == 'CONSIGNMENT':
+            owner_payout = item.owner_asking_price * self.quantity_sold
+            company_profit = self.sale_price - owner_payout
+            payout_status = self.PayoutStatus.PENDING
+        else:  # COMPANY
+            owner_payout = Decimal('0.00')
+            company_profit = self.sale_price - (item.cost_price * self.quantity_sold)
+            payout_status = self.PayoutStatus.NA
+        return owner_payout, company_profit, payout_status
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         # Compute amounts ONLY on the initial INSERT.
@@ -75,15 +88,11 @@ class Sale(AuditedModel):
         from apps.inventory.models import Item
 
         item = Item.objects.get(pk=self.item_id)
-
-        if item.owner_type == 'CONSIGNMENT':
-            self.owner_payout_amount = item.owner_asking_price * self.quantity_sold
-            self.payout_status = self.PayoutStatus.PENDING
-            self.company_profit = self.sale_price - self.owner_payout_amount
-        else:  # COMPANY
-            self.owner_payout_amount = Decimal('0.00')
-            self.payout_status = self.PayoutStatus.NA
-            self.company_profit = self.sale_price - (item.cost_price * self.quantity_sold)
+        (
+            self.owner_payout_amount,
+            self.company_profit,
+            self.payout_status,
+        ) = self.calculate_financials(item)
 
         super().save(*args, **kwargs)
 

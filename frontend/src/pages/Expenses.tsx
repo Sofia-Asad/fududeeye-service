@@ -1,71 +1,424 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { CreditCard, Filter, FolderPlus, Plus, ReceiptText, RotateCcw, Tags, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { z } from 'zod'
+
+import { createExpense, createExpenseCategory, listExpenseCategories, listExpenses } from '@/api/finance'
+import { getExpenseReport } from '@/api/reports'
+import { useAuth } from '@/auth/AuthContext'
+import DataTable, { type Column } from '@/components/DataTable'
+import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import Layout from '@/components/Layout'
+import MoneyDisplay from '@/components/MoneyDisplay'
+import PageHeader from '@/components/PageHeader'
+import PaginationFooter from '@/components/PaginationFooter'
+import PermissionGate from '@/components/PermissionGate'
+import SummaryCard from '@/components/SummaryCard'
+import { formatDate, PAYMENT_METHOD_LABELS, PAYMENT_METHODS, todayISO } from '@/lib/sales'
+import type { Expense } from '@/types/finance'
+import type { PaymentMethod } from '@/types/sales'
 
-const expenses = [
-  { date: 'Jun 28', cat: 'Rent', desc: 'Shop rent — June', method: 'Bank Transfer', amount: '$450.00', by: 'Axmed' },
-  { date: 'Jun 27', cat: 'Transport', desc: 'Vehicle delivery fuel', method: 'Cash', amount: '$35.00', by: 'Yuusuf' },
-  { date: 'Jun 26', cat: 'Utilities', desc: 'Generator diesel', method: 'Cash', amount: '$120.00', by: 'Hodan' },
-  { date: 'Jun 24', cat: 'Salaries', desc: 'Staff advance — Hodan', method: 'EVC Plus', amount: '$200.00', by: 'Axmed' },
-  { date: 'Jun 22', cat: 'Marketing', desc: 'Facebook ads', method: 'EVC Plus', amount: '$40.00', by: 'Axmed' },
-  { date: 'Jun 20', cat: 'Supplies', desc: 'Packaging & cleaning', method: 'Cash', amount: '$28.00', by: 'Yuusuf' },
-  { date: 'Jun 18', cat: 'Repairs', desc: 'Shop shelf repair', method: 'Cash', amount: '$60.00', by: 'Hodan' },
-  { date: 'Jun 15', cat: 'Utilities', desc: 'Internet — June', method: 'Zaad', amount: '$55.00', by: 'Axmed' },
-]
+type PaymentFilter = 'all' | PaymentMethod
 
-const card = { background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', padding: '15px 16px' } as const
-const th = { textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' as const, color: 'var(--muted)' }
+const moneyPattern = /^\d+(\.\d{1,2})?$/
+const expenseSchema = z.object({
+  category: z.string().trim().min(1, 'Category is required.'),
+  amount: z.string().trim().regex(moneyPattern, 'Use a valid amount.'),
+  expense_date: z.string().trim().min(1, 'Date is required.'),
+  payment_method: z.enum(['CASH', 'EVC_PLUS', 'ZAAD', 'BANK_TRANSFER', 'OTHER']),
+  description: z.string().trim().min(1, 'Description is required.'),
+  notes: z.string().trim(),
+}).refine(value => Number(value.amount) > 0, {
+  path: ['amount'],
+  message: 'Amount must be greater than zero.',
+})
+
+const categorySchema = z.object({
+  name: z.string().trim().min(1, 'Name is required.'),
+  description: z.string().trim(),
+})
+
+type ExpenseForm = z.infer<typeof expenseSchema>
+type CategoryForm = z.infer<typeof categorySchema>
+
+const emptyExpenseForm: ExpenseForm = {
+  category: '',
+  amount: '',
+  expense_date: todayISO(),
+  payment_method: 'CASH',
+  description: '',
+  notes: '',
+}
+
+const emptyCategoryForm: CategoryForm = {
+  name: '',
+  description: '',
+}
+
+function monthStartISO() {
+  const date = new Date()
+  date.setDate(1)
+  return date.toISOString().slice(0, 10)
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
+}
+
+function fieldErrors(error: z.ZodError) {
+  const nextErrors: Record<string, string> = {}
+  error.issues.forEach(issue => {
+    const field = String(issue.path[0] ?? 'form')
+    if (!nextErrors[field]) nextErrors[field] = issue.message
+  })
+  return nextErrors
+}
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <label className="field-label" data-error={!!error}>
+      <span className="field-title">{label}</span>
+      {children}
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  )
+}
 
 export default function Expenses() {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState<number | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentFilter>('all')
+  const [startDate, setStartDate] = useState(monthStartISO())
+  const [endDate, setEndDate] = useState(todayISO())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false)
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+  const [expenseForm, setExpenseForm] = useState<ExpenseForm>(emptyExpenseForm)
+  const [categoryForm, setCategoryForm] = useState<CategoryForm>(emptyCategoryForm)
+  const [expenseErrors, setExpenseErrors] = useState<Record<string, string>>({})
+  const [categoryErrors, setCategoryErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, category, paymentMethod, startDate, endDate])
+
+  const enabled = !!user?.can_view_finance
+
+  const categories = useQuery({
+    queryKey: ['expense-categories'],
+    queryFn: () => listExpenseCategories({ is_active: true, ordering: 'name' }),
+    enabled,
+  })
+
+  const expenses = useQuery({
+    queryKey: ['expenses', search, category, paymentMethod, startDate, endDate, currentPage],
+    queryFn: () => listExpenses({
+      search: search.trim() || undefined,
+      category: category ?? undefined,
+      payment_method: paymentMethod === 'all' ? undefined : paymentMethod,
+      start: startDate || undefined,
+      end: endDate || undefined,
+      ordering: '-expense_date',
+      page: currentPage,
+    }),
+    enabled,
+  })
+
+  const expenseReport = useQuery({
+    queryKey: ['reports', 'expenses', category, startDate, endDate],
+    queryFn: () => getExpenseReport({
+      category: category ?? undefined,
+      start: startDate || undefined,
+      end: endDate || undefined,
+    }),
+    enabled,
+  })
+
+  const create = useMutation({
+    mutationFn: createExpense,
+    onSuccess: () => {
+      setExpenseModalOpen(false)
+      setExpenseForm({ ...emptyExpenseForm, expense_date: todayISO() })
+      setExpenseErrors({})
+      void queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
+  })
+
+  const createCategory = useMutation({
+    mutationFn: createExpenseCategory,
+    onSuccess: categoryRow => {
+      setCategoryModalOpen(false)
+      setCategoryForm(emptyCategoryForm)
+      setCategoryErrors({})
+      setExpenseForm(current => ({ ...current, category: String(categoryRow.id) }))
+      void queryClient.invalidateQueries({ queryKey: ['expense-categories'] })
+    },
+  })
+
+  const rows = expenses.data?.results ?? []
+  const largestCategory = useMemo(() => expenseReport.data?.by_category.reduce<null | { category: string; total: string }>((largest, row) => {
+    if (!largest || Number(row.total) > Number(largest.total)) {
+      return { category: row.category, total: row.total }
+    }
+    return largest
+  }, null), [expenseReport.data?.by_category])
+
+  const cashRows = rows.filter(row => row.payment_method === 'CASH').length
+
+  const columns: Column<Expense>[] = [
+    {
+      key: 'expense_date',
+      header: 'Expense',
+      render: expense => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--warning-bg)', color: 'var(--warning)' }}>
+            <ReceiptText size={16} />
+          </span>
+          <span>
+            <strong style={{ display: 'block', color: 'var(--text)', fontWeight: 700 }}>{expense.description}</strong>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>{formatDate(expense.expense_date)}</span>
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      render: expense => (
+        <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--neutral-bg)', color: 'var(--neutral)' }}>
+          {expense.category_name || '-'}
+        </span>
+      ),
+    },
+    { key: 'payment_method', header: 'Paid via', render: expense => PAYMENT_METHOD_LABELS[expense.payment_method] },
+    { key: 'notes', header: 'Notes', render: expense => expense.notes || '-' },
+    { key: 'amount', header: 'Amount', align: 'right', render: expense => <MoneyDisplay value={expense.amount} /> },
+  ]
+
+  function updateExpenseField<K extends keyof ExpenseForm>(field: K, value: ExpenseForm[K]) {
+    setExpenseForm(current => ({ ...current, [field]: value }))
+    setExpenseErrors(current => ({ ...current, [field]: '' }))
+  }
+
+  function updateCategoryField<K extends keyof CategoryForm>(field: K, value: CategoryForm[K]) {
+    setCategoryForm(current => ({ ...current, [field]: value }))
+    setCategoryErrors(current => ({ ...current, [field]: '' }))
+  }
+
+  function submitExpense(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const parsed = expenseSchema.safeParse(expenseForm)
+    if (!parsed.success) {
+      setExpenseErrors(fieldErrors(parsed.error))
+      return
+    }
+    create.mutate({
+      category: Number(parsed.data.category),
+      amount: parsed.data.amount,
+      expense_date: parsed.data.expense_date,
+      payment_method: parsed.data.payment_method,
+      description: parsed.data.description,
+      notes: parsed.data.notes,
+    })
+  }
+
+  function submitCategory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const parsed = categorySchema.safeParse(categoryForm)
+    if (!parsed.success) {
+      setCategoryErrors(fieldErrors(parsed.error))
+      return
+    }
+    createCategory.mutate({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      is_active: true,
+    })
+  }
+
+  function resetFilters() {
+    setSearch('')
+    setCategory(null)
+    setPaymentMethod('all')
+    setStartDate(monthStartISO())
+    setEndDate(todayISO())
+  }
+
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>Expenses</h1>
-              <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }}>June 2026</p>
-            </div>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 16px', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              New expense
-            </button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
-            <div style={card}><div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Total this month</div><div style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>$988.00</div></div>
-            <div style={card}><div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Largest category</div><div style={{ fontSize: 24, fontWeight: 700 }}>Rent · $450.00</div></div>
-            <div style={card}><div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Expenses logged</div><div style={{ fontSize: 24, fontWeight: 700 }}>14</div></div>
-          </div>
-
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface-2)' }}>
-                  <th style={th}>Date</th>
-                  <th style={th}>Category</th>
-                  <th style={th}>Description</th>
-                  <th style={th}>Paid via</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Amount</th>
-                  <th style={th}>By</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((e, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid var(--divider)', cursor: 'pointer' }}>
-                    <td style={{ padding: '12px 16px', fontSize: 12.5, color: 'var(--muted)' }}>{e.date}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: 'var(--surface-2)', color: 'var(--muted)' }}>{e.cat}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500 }}>{e.desc}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 12.5, color: 'var(--muted)' }}>{e.method}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{e.amount}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13 }}>{e.by}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <PermissionGate minRole="MANAGER" fallback={
+        <div className="app-page">
+          <div className="card" style={{ padding: 22, color: 'var(--muted)' }}>Your role cannot view expenses.</div>
         </div>
-      </div>
+      }>
+        <div className="app-page">
+          <PageHeader
+            eyebrow="Money"
+            title="Expenses"
+            subtitle="Operating costs by category, date range, and payment method."
+            actions={(
+              <>
+                <button type="button" onClick={() => setCategoryModalOpen(true)} className="secondary-button">
+                  <FolderPlus size={16} />
+                  Category
+                </button>
+                <button type="button" onClick={() => setExpenseModalOpen(true)} className="primary-button">
+                  <Plus size={16} />
+                  New expense
+                </button>
+              </>
+            )}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <SummaryCard label="Total expenses" value={<MoneyDisplay value={expenseReport.data?.total ?? 0} />} caption="Selected period" icon={<CreditCard size={18} />} tone="red" valueColor="var(--money-owed)" />
+            <SummaryCard label="Largest category" value={largestCategory ? largestCategory.category : '-'} caption={largestCategory ? <MoneyDisplay value={largestCategory.total} /> : 'No spend yet'} icon={<Tags size={18} />} tone="amber" />
+            <SummaryCard label="Rows in period" value={expenseReport.data?.count ?? '-'} caption="Report count" icon={<ReceiptText size={18} />} tone="blue" />
+            <SummaryCard label="Cash rows" value={cashRows} caption="On current page" icon={<CreditCard size={18} />} tone="neutral" />
+          </div>
+
+          <DirectoryCard
+            title="Expense directory"
+            count={expenses.data ? `${expenses.data.count} expenses in view` : 'Loading records'}
+            toolbar={(
+              <DirectoryToolbar>
+                <SearchBox value={search} onChange={setSearch} placeholder="Search expenses" />
+                <input className="control" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} style={{ padding: '0 12px' }} />
+                <input className="control" type="date" value={endDate} onChange={event => setEndDate(event.target.value)} style={{ padding: '0 12px' }} />
+                <DirectorySelect value={category ?? 'all'} onChange={value => setCategory(value === 'all' ? null : Number(value))} ariaLabel="Expense category">
+                  <option value="all">All categories</option>
+                  {(categories.data?.results ?? []).map(row => (
+                    <option key={row.id} value={row.id}>{row.name}</option>
+                  ))}
+                </DirectorySelect>
+                <DirectorySelect value={paymentMethod} onChange={value => setPaymentMethod(value as PaymentFilter)} ariaLabel="Payment method">
+                  <option value="all">All payments</option>
+                  {PAYMENT_METHODS.map(method => (
+                    <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
+                  ))}
+                </DirectorySelect>
+                <button type="button" className="primary-button" onClick={() => setCurrentPage(1)}>
+                  <Filter size={16} />
+                  Filter
+                </button>
+                <button type="button" className="secondary-button" onClick={resetFilters}>
+                  <RotateCcw size={16} />
+                  Reset
+                </button>
+              </DirectoryToolbar>
+            )}
+            footer={expenses.data && (
+              <PaginationFooter
+                page={currentPage}
+                total={expenses.data.count}
+                hasPrevious={!!expenses.data.previous}
+                hasNext={!!expenses.data.next}
+                onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+                onNext={() => setCurrentPage(page => page + 1)}
+              />
+            )}
+          >
+            {expenses.isLoading && <DirectorySkeleton />}
+            {expenses.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(expenses.error)}</div>}
+            {expenses.data && <DataTable columns={columns} rows={rows} empty="No expenses match the current filters." variant="bare" />}
+          </DirectoryCard>
+        </div>
+      </PermissionGate>
+
+      {expenseModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setExpenseModalOpen(false)}>
+          <form onSubmit={submitExpense} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
+              <div>
+                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New expense</h2>
+                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Record an operating cost.</p>
+              </div>
+              <button type="button" onClick={() => setExpenseModalOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
+              <Field label="Category" error={expenseErrors.category}>
+                <select className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+                  <option value="">Choose category</option>
+                  {(categories.data?.results ?? []).map(row => (
+                    <option key={row.id} value={row.id}>{row.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <div className="modal-grid-3" style={{ gap: 14 }}>
+                <Field label="Amount" error={expenseErrors.amount}>
+                  <input className="control" value={expenseForm.amount} onChange={event => updateExpenseField('amount', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+                </Field>
+                <Field label="Date" error={expenseErrors.expense_date}>
+                  <input className="control" type="date" value={expenseForm.expense_date} onChange={event => updateExpenseField('expense_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                </Field>
+                <Field label="Payment">
+                  <select className="control" value={expenseForm.payment_method} onChange={event => updateExpenseField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
+                    {PAYMENT_METHODS.map(method => (
+                      <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <Field label="Description" error={expenseErrors.description}>
+                <textarea className="control" value={expenseForm.description} onChange={event => updateExpenseField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+              <Field label="Notes">
+                <textarea className="control" value={expenseForm.notes} onChange={event => updateExpenseField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+              {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
+              <button type="button" onClick={() => setExpenseModalOpen(false)} className="secondary-button">Cancel</button>
+              <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
+                {create.isPending ? 'Saving...' : 'Save expense'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {categoryModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setCategoryModalOpen(false)}>
+          <form onSubmit={submitCategory} className="card" style={{ width: 'min(440px, 100%)', overflow: 'hidden' }} onClick={event => event.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
+              <div>
+                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New category</h2>
+                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Organize expense reporting.</p>
+              </div>
+              <button type="button" onClick={() => setCategoryModalOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
+              <Field label="Name" error={categoryErrors.name}>
+                <input className="control" value={categoryForm.name} onChange={event => updateCategoryField('name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Description">
+                <textarea className="control" value={categoryForm.description} onChange={event => updateCategoryField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+              {createCategory.isError && <div className="error-banner">{errorMessage(createCategory.error)}</div>}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
+              <button type="button" onClick={() => setCategoryModalOpen(false)} className="secondary-button">Cancel</button>
+              <button type="submit" disabled={createCategory.isPending} className="primary-button" style={{ opacity: createCategory.isPending ? .7 : 1 }}>
+                {createCategory.isPending ? 'Saving...' : 'Save category'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </Layout>
   )
 }

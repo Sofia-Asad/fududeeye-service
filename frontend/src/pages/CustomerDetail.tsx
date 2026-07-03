@@ -1,117 +1,280 @@
 import { useState } from 'react'
-import Layout from '@/components/Layout'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Phone, ShoppingCart } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 
-const STATUS: Record<string, { bg: string; fg: string }> = {
-  Active: { bg: '#e7f4ec', fg: '#1f7a4d' },
-  Reserved: { bg: '#fbf0e0', fg: '#b45309' },
-  Sold: { bg: '#e8ecf5', fg: '#1d3480' },
+import {
+  getCustomer,
+  listCustomerComplaints,
+  listCustomerDemands,
+  listCustomerItems,
+  listCustomerPurchases,
+} from '@/api/customers'
+import DataTable, { type Column } from '@/components/DataTable'
+import Layout from '@/components/Layout'
+import MoneyDisplay from '@/components/MoneyDisplay'
+import PageHeader from '@/components/PageHeader'
+import StatusBadge from '@/components/StatusBadge'
+import SummaryCard from '@/components/SummaryCard'
+import type { ComplaintSummary, Customer, DemandSummary, ItemSummary, SaleSummary } from '@/types/customer'
+
+const TABS = ['Profile', 'Items owned', 'Purchases', 'Demands', 'Complaints'] as const
+type Tab = typeof TABS[number]
+
+function initials(customer?: Customer) {
+  return (customer?.full_name ?? '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
 }
 
-const itemsOwned = [
-  { name: 'Leather sofa (3-seat)', listed: '$410.00', ask: '$350.00', status: 'Reserved', note: '' },
-  { name: 'Dining chairs (set of 4)', listed: '$180.00', ask: '$150.00', status: 'Active', note: '' },
-  { name: 'Wardrobe (4-door)', listed: '$220.00', ask: '$190.00', status: 'Sold', note: 'Payout pending' },
-  { name: 'Coffee table', listed: '$95.00', ask: '$80.00', status: 'Sold', note: 'Paid Jun 12' },
-]
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(value))
+}
 
-const TABS = ['Profile', 'Items owned', 'Purchases', 'Demands', 'Complaints']
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
+}
 
-const th = { textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' as const, color: 'var(--muted)' }
+function targetRange(demand: DemandSummary) {
+  if (demand.target_price_min && demand.target_price_max) {
+    return (
+      <>
+        <MoneyDisplay value={demand.target_price_min} /> - <MoneyDisplay value={demand.target_price_max} />
+      </>
+    )
+  }
+  if (demand.target_price_min) return <MoneyDisplay value={demand.target_price_min} />
+  if (demand.target_price_max) return <MoneyDisplay value={demand.target_price_max} />
+  return '-'
+}
+
+function ContactPill({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid var(--border)', borderRadius: 999, background: '#fff', padding: '7px 10px', color: 'var(--muted)', fontSize: 12.5 }}>
+      {icon}
+      {text || '-'}
+    </span>
+  )
+}
 
 export default function CustomerDetail() {
-  const [tab, setTab] = useState('Items owned')
+  const { id } = useParams()
+  const customerId = Number(id)
+  const validCustomerId = Number.isFinite(customerId) && customerId > 0
+  const [tab, setTab] = useState<Tab>('Profile')
+
+  const customer = useQuery({
+    queryKey: ['customer', customerId],
+    queryFn: () => getCustomer(customerId),
+    enabled: validCustomerId,
+  })
+  const items = useQuery({
+    queryKey: ['customer-items', customerId],
+    queryFn: () => listCustomerItems(customerId),
+    enabled: validCustomerId,
+  })
+  const purchases = useQuery({
+    queryKey: ['customer-purchases', customerId],
+    queryFn: () => listCustomerPurchases(customerId),
+    enabled: validCustomerId,
+  })
+  const demands = useQuery({
+    queryKey: ['customer-demands', customerId],
+    queryFn: () => listCustomerDemands(customerId),
+    enabled: validCustomerId,
+  })
+  const complaints = useQuery({
+    queryKey: ['customer-complaints', customerId],
+    queryFn: () => listCustomerComplaints(customerId),
+    enabled: validCustomerId,
+  })
+
+  const itemRows = items.data?.results ?? []
+  const purchaseRows = purchases.data?.results ?? []
+  const demandRows = demands.data?.results ?? []
+  const complaintRows = complaints.data?.results ?? []
+
+  const itemColumns: Column<ItemSummary>[] = [
+    { key: 'title', header: 'Item', render: item => <strong style={{ color: 'var(--text)' }}>{item.title}</strong> },
+    { key: 'listed_price', header: 'Listed', align: 'right', render: item => <MoneyDisplay value={item.listed_price} /> },
+    { key: 'owner_asking_price', header: 'Owner ask', align: 'right', render: item => item.owner_asking_price ? <MoneyDisplay value={item.owner_asking_price} /> : '-' },
+    { key: 'quantity_available', header: 'Available', align: 'right', render: item => item.quantity_available },
+    { key: 'status', header: 'Status', render: item => <StatusBadge status={item.status} /> },
+  ]
+
+  const purchaseColumns: Column<SaleSummary>[] = [
+    { key: 'id', header: 'Sale', render: sale => <Link to={`/sales/${sale.id}`} style={{ color: 'var(--primary-hover)', fontWeight: 700, textDecoration: 'none' }}>#{sale.id}</Link> },
+    { key: 'item', header: 'Item', render: sale => `Item #${sale.item}` },
+    { key: 'quantity_sold', header: 'Qty', align: 'right', render: sale => sale.quantity_sold },
+    { key: 'sale_price', header: 'Amount', align: 'right', render: sale => <MoneyDisplay value={sale.sale_price} /> },
+    { key: 'sale_date', header: 'Date', render: sale => formatDate(sale.sale_date) },
+  ]
+
+  const demandColumns: Column<DemandSummary>[] = [
+    { key: 'title', header: 'Demand', render: demand => <strong style={{ color: 'var(--text)' }}>{demand.title}</strong> },
+    { key: 'target', header: 'Target price', align: 'right', render: demand => targetRange(demand) },
+    { key: 'status', header: 'Status', render: demand => <StatusBadge status={demand.status} /> },
+    { key: 'created_at', header: 'Created', render: demand => formatDate(demand.created_at) },
+  ]
+
+  const complaintColumns: Column<ComplaintSummary>[] = [
+    { key: 'ticket_number', header: 'Ticket', render: complaint => complaint.ticket_number },
+    { key: 'subject', header: 'Subject', render: complaint => <strong style={{ color: 'var(--text)' }}>{complaint.subject}</strong> },
+    { key: 'priority', header: 'Priority', render: complaint => <StatusBadge status={complaint.priority} /> },
+    { key: 'status', header: 'Status', render: complaint => <StatusBadge status={complaint.status} /> },
+  ]
+
+  if (!validCustomerId) {
+    return <Layout><div className="app-page"><div className="error-banner">Customer not found.</div></div></Layout>
+  }
+
+  if (customer.isLoading) {
+    return (
+      <Layout>
+        <div className="app-page">
+          <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
+            <span className="skeleton-row" style={{ width: '38%' }} />
+            <span className="skeleton-row" style={{ width: '72%' }} />
+          </section>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (customer.isError || !customer.data) {
+    return <Layout><div className="app-page"><div className="error-banner">{errorMessage(customer.error)}</div></div></Layout>
+  }
+
+  const current = customer.data
 
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
+      <div className="app-page">
         <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-          {/* HEADER */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', padding: '24px 28px', marginBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18 }}>
-              <div style={{ width: 58, height: 58, borderRadius: '50%', background: '#f9a800', color: '#1d3480', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, flexShrink: 0 }}>MC</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.01em' }}>Maryan Cali</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: '#e7f4ec', color: '#1f7a4d', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1f7a4d' }} /> Active
-                  </span>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: 'var(--accent-weak)', color: 'var(--accent)' }}>Buyer</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: 'var(--surface-2)', color: 'var(--muted)' }}>Seller</span>
-                </div>
-                <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)' }}>
-                  <span>+252 61 234 5678</span>
-                  <span>Mogadishu</span>
-                  <span>Customer since Mar 2024</span>
-                </div>
+          <Link to="/customers" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--primary-hover)', fontSize: 13, fontWeight: 700, textDecoration: 'none', marginBottom: 14 }}>
+            <ArrowLeft size={16} />
+            Customers
+          </Link>
+
+          <PageHeader
+            eyebrow="Customer detail"
+            title={current.full_name}
+            subtitle={(
+              <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                <ContactPill icon={<Phone size={14} />} text={current.phone} />
+                <ContactPill icon={<Mail size={14} />} text={current.email} />
+                <ContactPill icon={<MapPin size={14} />} text={current.address} />
+              </span>
+            )}
+            actions={(
+              <>
+                <StatusBadge status={current.is_active ? 'ACTIVE' : 'INACTIVE'} />
+                {current.is_buyer && <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)' }}>Buyer</span>}
+                {current.is_seller && <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--warning-bg)', color: 'var(--warning)' }}>Seller</span>}
+              </>
+            )}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <SummaryCard label="Items owned" value={items.data?.count ?? itemRows.length} caption="Consignment inventory" icon={<Package size={18} />} />
+            <SummaryCard label="Purchases" value={purchases.data?.count ?? purchaseRows.length} caption="Buyer history" icon={<ShoppingCart size={18} />} tone="blue" />
+            <SummaryCard label="Demands" value={demands.data?.count ?? demandRows.length} caption="Open and past requests" icon={<ClipboardList size={18} />} tone="amber" />
+            <SummaryCard label="Complaints" value={complaints.data?.count ?? complaintRows.length} caption="Support tickets" icon={<MessageSquareWarning size={18} />} tone={complaintRows.length > 0 ? 'red' : 'neutral'} />
+          </div>
+
+          <section className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', borderBottom: '1px solid var(--row-line)' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--primary-soft)', color: 'var(--primary-hover)', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
+                {initials(current)}
               </div>
-              <button style={{ height: 36, padding: '0 14px', border: '1px solid var(--divider)', borderRadius: 6, background: 'var(--surface)', fontSize: 13, fontFamily: 'inherit', color: 'var(--text)', fontWeight: 500, cursor: 'pointer' }}>Edit</button>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700 }}>{current.full_name}</div>
+                <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>Customer since {formatDate(current.created_at)}</div>
+              </div>
             </div>
-          </div>
 
-          {/* STAT CARDS */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 18 }}>
-            {[
-              { label: 'Items on consignment', value: '4', color: 'var(--text)' },
-              { label: 'Lifetime sold', value: '$1,240', color: 'var(--text)' },
-              { label: 'Pending payout', value: '$350.00', color: 'var(--warning)' },
-              { label: 'Purchases', value: '3', color: 'var(--text)' },
-            ].map(k => (
-              <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', padding: '14px 16px' }}>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>{k.label}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontVariantNumeric: 'tabular-nums' }}>{k.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* TABS */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--divider)', padding: '0 20px' }}>
-              {TABS.map(t => (
-                <button key={t} onClick={() => setTab(t)} style={{ height: 48, padding: '0 16px', border: 'none', background: 'none', fontSize: 13.5, fontFamily: 'inherit', fontWeight: tab === t ? 600 : 400, color: tab === t ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent', marginBottom: -1 }}>
-                  {t}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--row-line)', padding: '0 18px', overflowX: 'auto' }}>
+              {TABS.map(nextTab => (
+                <button
+                  key={nextTab}
+                  type="button"
+                  onClick={() => setTab(nextTab)}
+                  style={{ height: 50, padding: '0 16px', border: 'none', background: 'none', fontSize: 13.5, fontFamily: 'inherit', fontWeight: tab === nextTab ? 700 : 500, color: tab === nextTab ? 'var(--primary-hover)' : 'var(--muted)', cursor: 'pointer', borderBottom: tab === nextTab ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1, whiteSpace: 'nowrap' }}
+                >
+                  {nextTab}
                 </button>
               ))}
             </div>
 
-            {tab === 'Items owned' && (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: 'var(--surface-2)' }}>
-                    <th style={th}>Item</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Listed price</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Owner asking</th>
-                    <th style={th}>Status</th>
-                    <th style={th}>Note</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {itemsOwned.map((item, i) => {
-                    const s = STATUS[item.status] ?? { bg: '#eef2f7', fg: '#6b7c93' }
-                    return (
-                      <tr key={i} style={{ borderTop: '1px solid var(--divider)' }}>
-                        <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600 }}>{item.name}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{item.listed}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--muted)' }}>{item.ask}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: s.bg, color: s.fg }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.fg }} />
-                            {item.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontSize: 12.5, color: item.note.includes('pending') ? 'var(--warning)' : item.note.includes('Paid') ? 'var(--success)' : 'var(--muted)' }}>{item.note || '—'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-
-            {tab !== 'Items owned' && (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>
-                No {tab.toLowerCase()} records yet.
+            {tab === 'Profile' && (
+              <div style={{ padding: 20 }}>
+                <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700 }}>Profile</h2>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {[
+                    ['Phone', current.phone],
+                    ['Alternate', current.alternate_phone || '-'],
+                    ['Email', current.email || '-'],
+                    ['Address', current.address || '-'],
+                    ['Notes', current.notes || '-'],
+                    ['Updated', formatDate(current.updated_at)],
+                  ].map(([label, value]) => (
+                    <div key={label} style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', gap: 12, alignItems: 'baseline' }}>
+                      <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>{label}</div>
+                      <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 700 }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
+
+            {tab === 'Items owned' && (
+              <>
+                <div style={{ padding: '16px 18px 12px' }}>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Owned item records</h2>
+                  <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{itemRows.length} rows</div>
+                </div>
+                <DataTable variant="bare" columns={itemColumns} rows={itemRows} empty={items.isLoading ? 'Loading items...' : 'No owned items yet.'} />
+              </>
+            )}
+            {tab === 'Purchases' && (
+              <>
+                <div style={{ padding: '16px 18px 12px' }}>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Purchase records</h2>
+                  <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{purchaseRows.length} rows</div>
+                </div>
+                <DataTable variant="bare" columns={purchaseColumns} rows={purchaseRows} empty={purchases.isLoading ? 'Loading purchases...' : 'No purchases yet.'} />
+              </>
+            )}
+            {tab === 'Demands' && (
+              <>
+                <div style={{ padding: '16px 18px 12px' }}>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Demand records</h2>
+                  <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{demandRows.length} rows</div>
+                </div>
+                <DataTable variant="bare" columns={demandColumns} rows={demandRows} empty={demands.isLoading ? 'Loading demands...' : 'No demands yet.'} />
+              </>
+            )}
+            {tab === 'Complaints' && (
+              <>
+                <div style={{ padding: '16px 18px 12px' }}>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Complaint records</h2>
+                  <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{complaintRows.length} rows</div>
+                </div>
+                <DataTable variant="bare" columns={complaintColumns} rows={complaintRows} empty={complaints.isLoading ? 'Loading complaints...' : 'No complaints yet.'} />
+              </>
+            )}
+          </section>
         </div>
       </div>
     </Layout>

@@ -1,6 +1,7 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.accounts.permissions import IsManagerOrAbove, IsStaffEditOwn, DenyDeleteUnlessAdmin
@@ -11,12 +12,16 @@ from .serializers import CategorySerializer, ItemSerializer, ItemImageSerializer
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsManagerOrAbove]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['kind', 'parent']
     search_fields = ['name']
     ordering_fields = ['name']
     ordering = ['name']
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [IsAuthenticated()]
+        return [IsManagerOrAbove(), DenyDeleteUnlessAdmin()]
 
 
 class ItemViewSet(viewsets.ModelViewSet):
@@ -24,7 +29,7 @@ class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
     permission_classes = [IsStaffEditOwn, DenyDeleteUnlessAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'category', 'owner_type', 'condition']
+    filterset_fields = ['status', 'category', 'owner_type', 'owner', 'condition']
     search_fields = ['title', 'description', 'owner__full_name', 'location']
     ordering_fields = ['title', 'listed_price', 'created_at', 'status']
     ordering = ['-created_at']

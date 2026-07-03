@@ -1,86 +1,193 @@
+import { useEffect, useState } from 'react'
+import { Filter, ShieldCheck, UserCog, UsersRound } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+
+import { listUsers } from '@/api/accounts'
+import { useAuth } from '@/auth/AuthContext'
+import DataTable, { type Column } from '@/components/DataTable'
+import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import Layout from '@/components/Layout'
+import PageHeader from '@/components/PageHeader'
+import PaginationFooter from '@/components/PaginationFooter'
+import PermissionGate from '@/components/PermissionGate'
+import StatusBadge from '@/components/StatusBadge'
+import SummaryCard from '@/components/SummaryCard'
+import type { Role, User } from '@/types/auth'
 
-const users = [
-  { name: 'Axmed Aweys', initials: 'AA', role: 'Owner', phone: '+252 61 111 0000', status: 'Active', lastActive: 'Online now', bg: '#f9a800', fg: '#1d3480' },
-  { name: 'Maryan Faarax', initials: 'MF', role: 'Manager', phone: '+252 61 222 1111', status: 'Active', lastActive: 'Today 08:10', bg: '#e8ecf5', fg: '#1d3480' },
-  { name: 'Hodan Maxamuud', initials: 'HM', role: 'Sales', phone: '+252 61 333 2222', status: 'Active', lastActive: '5 min ago', bg: '#f0f3fa', fg: '#5a6b8a' },
-  { name: 'Yuusuf Cali', initials: 'YC', role: 'Sales', phone: '+252 61 444 3333', status: 'Active', lastActive: '1 hr ago', bg: '#f0f3fa', fg: '#5a6b8a' },
-  { name: 'Cabdi Nuur', initials: 'CN', role: 'Sales', phone: '+252 61 555 4444', status: 'Invited', lastActive: 'Pending', bg: '#f0f3fa', fg: '#5a6b8a' },
-]
-
-const ROLE_STYLES: Record<string, { bg: string; fg: string }> = {
-  Owner: { bg: '#f9a800', fg: '#1d3480' },
-  Manager: { bg: '#e8ecf5', fg: '#1d3480' },
-  Sales: { bg: '#f0f3fa', fg: '#5a6b8a' },
+const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: 'Admin',
+  MANAGER: 'Manager',
+  SALES: 'Sales',
 }
 
-const th = { textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' as const, color: 'var(--muted)' }
+const ROLE_STYLES: Record<Role, { bg: string; fg: string }> = {
+  ADMIN: { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
+  MANAGER: { bg: 'var(--info-bg)', fg: 'var(--info)' },
+  SALES: { bg: 'var(--neutral-bg)', fg: 'var(--neutral)' },
+}
+
+const adminUsersUrl = `${new URL(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1').origin}/admin/accounts/user/`
+
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
+}
+
+function fullName(user: User) {
+  return [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username
+}
+
+function initials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+}
+
+function RoleBadge({ role }: { role: Role }) {
+  const style = ROLE_STYLES[role]
+  return (
+    <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 11px', borderRadius: 999, background: style.bg, color: style.fg }}>
+      {ROLE_LABELS[role]}
+    </span>
+  )
+}
 
 export default function Users() {
+  const { user: currentUser } = useAuth()
+  const [search, setSearch] = useState('')
+  const [ordering, setOrdering] = useState('username')
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, ordering])
+
+  const users = useQuery({
+    queryKey: ['users', search, ordering, currentPage],
+    queryFn: () => listUsers({
+      search: search.trim() || undefined,
+      ordering,
+      page: currentPage,
+    }),
+    enabled: !!currentUser?.is_admin,
+  })
+
+  const rows = users.data?.results ?? []
+  const stats = {
+    active: rows.filter(user => user.is_active_staff).length,
+    admins: rows.filter(user => user.role === 'ADMIN').length,
+    managers: rows.filter(user => user.role === 'MANAGER').length,
+    sales: rows.filter(user => user.role === 'SALES').length,
+  }
+
+  const columns: Column<User>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: user => {
+        const name = fullName(user)
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 999, background: user.role === 'ADMIN' ? 'var(--warning-bg)' : 'var(--primary-soft)', color: user.role === 'ADMIN' ? 'var(--warning)' : 'var(--primary-hover)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+              {initials(name)}
+            </div>
+            <div>
+              <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 700 }}>{name}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>@{user.username}</div>
+            </div>
+          </div>
+        )
+      },
+    },
+    { key: 'role', header: 'Role', render: user => <RoleBadge role={user.role} /> },
+    { key: 'phone', header: 'Phone', render: user => user.phone || '-' },
+    { key: 'email', header: 'Email', render: user => user.email || '-' },
+    { key: 'status', header: 'Status', render: user => <StatusBadge status={user.is_active_staff ? 'ACTIVE' : 'INACTIVE'} /> },
+    {
+      key: 'capabilities',
+      header: 'Capabilities',
+      render: user => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {user.can_view_finance && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: 'var(--primary-soft)', color: 'var(--primary-hover)' }}>Finance</span>}
+          {user.can_delete && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: 'var(--danger-bg)', color: 'var(--danger)' }}>Delete</span>}
+          {!user.can_view_finance && !user.can_delete && <span style={{ color: 'var(--muted)' }}>-</span>}
+        </div>
+      ),
+    },
+  ]
+
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>Users</h1>
-              <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }}>5 team members · 1 invited</p>
-            </div>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 16px', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Invite user
-            </button>
+      <PermissionGate minRole="ADMIN" fallback={
+        <div className="app-page">
+          <div className="card" style={{ padding: 22, color: 'var(--muted)' }}>Your role cannot view users.</div>
+        </div>
+      }>
+        <div className="app-page">
+          <PageHeader
+            eyebrow="Insights"
+            title="Users"
+            subtitle="Read-only staff directory; manage accounts in Django admin."
+            actions={(
+              <a href={adminUsersUrl} className="secondary-button">
+                <ShieldCheck size={16} />
+                Django admin
+              </a>
+            )}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <SummaryCard label="Active on page" value={stats.active} caption="Enabled staff accounts" icon={<UsersRound size={18} />} />
+            <SummaryCard label="Admins" value={stats.admins} caption="On current page" icon={<ShieldCheck size={18} />} tone="amber" />
+            <SummaryCard label="Managers" value={stats.managers} caption="On current page" icon={<UserCog size={18} />} tone="blue" />
+            <SummaryCard label="Sales" value={stats.sales} caption="On current page" icon={<UsersRound size={18} />} tone="neutral" />
           </div>
 
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface-2)' }}>
-                  <th style={th}>Name</th>
-                  <th style={th}>Role</th>
-                  <th style={th}>Phone</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Last active</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u, i) => {
-                  const r = ROLE_STYLES[u.role] ?? { bg: '#f2f6fb', fg: '#5a6b82' }
-                  const isInvited = u.status === 'Invited'
-                  return (
-                    <tr key={i} style={{ borderTop: '1px solid var(--divider)' }}>
-                      <td style={{ padding: '13px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: u.bg, color: u.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{u.initials}</div>
-                          <span style={{ fontSize: 13.5, fontWeight: 600 }}>{u.name}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '13px 16px' }}>
-                        <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: r.bg, color: r.fg }}>{u.role}</span>
-                      </td>
-                      <td style={{ padding: '13px 16px', fontSize: 13, color: 'var(--muted)' }}>{u.phone}</td>
-                      <td style={{ padding: '13px 16px' }}>
-                        {isInvited
-                          ? <span style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: '#fbf0e0', color: '#b45309' }}>Invited</span>
-                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: '#e7f4ec', color: '#1f7a4d' }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1f7a4d' }} />
-                              Active
-                            </span>
-                        }
-                      </td>
-                      <td style={{ padding: '13px 16px', fontSize: 12.5, color: u.lastActive === 'Online now' ? 'var(--success)' : 'var(--muted)', fontWeight: u.lastActive === 'Online now' ? 600 : 400 }}>{u.lastActive}</td>
-                      <td style={{ padding: '13px 16px', textAlign: 'right' }}>
-                        <button style={{ width: 32, height: 32, border: '1px solid var(--divider)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 14, fontWeight: 700 }}>···</button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DirectoryCard
+            title="User directory"
+            count={users.data ? `${users.data.count} staff accounts` : 'Loading records'}
+            toolbar={(
+              <DirectoryToolbar>
+                <SearchBox value={search} onChange={setSearch} placeholder="Search users" />
+                <DirectorySelect value={ordering} onChange={setOrdering} ariaLabel="Ordering">
+                  <option value="username">Username A-Z</option>
+                  <option value="-username">Username Z-A</option>
+                  <option value="role">Role A-Z</option>
+                  <option value="-role">Role Z-A</option>
+                </DirectorySelect>
+                <button type="button" className="primary-button" onClick={() => setCurrentPage(1)}>
+                  <Filter size={16} />
+                  Filter
+                </button>
+              </DirectoryToolbar>
+            )}
+            footer={users.data && (
+              <PaginationFooter
+                page={currentPage}
+                total={users.data.count}
+                hasPrevious={!!users.data.previous}
+                hasNext={!!users.data.next}
+                onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+                onNext={() => setCurrentPage(page => page + 1)}
+              />
+            )}
+          >
+            {users.isLoading && <DirectorySkeleton />}
+            {users.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(users.error)}</div>}
+            {users.data && <DataTable columns={columns} rows={rows} empty="No users match the current filters." variant="bare" />}
+          </DirectoryCard>
         </div>
-      </div>
+      </PermissionGate>
     </Layout>
   )
 }

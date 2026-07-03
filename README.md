@@ -160,7 +160,7 @@ No Redux. No Next.js. No new state libraries or CSS frameworks.
 | `demands`     | `Demand`                                              | what a customer wants; `.suggest_matches()` returns candidate items by category + price range          |
 | `complaints`  | `Complaint`                                           | ticket number `TKT-00001`, status workflow, priority, assignment                                       |
 | `finance`     | `ExpenseCategory`, `Expense`                          | expenses with category, amount, payment method, receipt image                                          |
-| `reports`     | (none — views only)                                   | dashboard KPIs, sales/profit/expense reports, pending payouts                                          |
+| `reports`     | (none — views only)                                   | dashboard KPIs, sales/profit/expense reports, pending payouts, demand/supply, audit log                |
 
 Payment methods supported throughout: Cash, EVC Plus, Zaad, Bank Transfer, Other.
 
@@ -508,6 +508,7 @@ match the Fududeeye brand logo (`fududeeye logo.jpeg`). Implemented in
 | Resolved | `#e7f4ec` | `#1f7a4d` |
 | Matched | `#e8ecf5` | `#1d3480` |
 | Fulfilled | `#e7f4ec` | `#1f7a4d` |
+| Dropped | `#eef2f7` | `#6b7c93` |
 | Closed | `#eef2f7` | `#6b7c93` |
 
 **Sidebar layout:** 228 px fixed width. Logo displayed as 34×34 white-bg rounded tile on the navy sidebar. Nav items: 9 px / 12 px padding, 6 px border-radius, 13.5 px font-size. Active item: 3 px left border `#f9a800` (gold), `rgba(249,168,0,.15)` background, weight 600, white text. Inactive: `#9db4da` text, weight 500.
@@ -529,11 +530,17 @@ export DJANGO_SETTINGS_MODULE=config.settings.dev
 python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
+python manage.py seed_demo_data               # optional: realistic demo/test data
 python manage.py runserver                # http://localhost:8000
 ```
 
 - Django admin: <http://localhost:8000/admin/>
 - API root: <http://localhost:8000/api/v1/>
+- Demo seed command: `python manage.py seed_demo_data`
+  - Safe to rerun; it skips existing demo sales/refunds so sale side-effects are not duplicated.
+  - Creates varied users, customers, categories, inventory statuses, sales, refunds, demands, complaints, expenses, payouts, and audit events.
+  - Demo logins: `demo_admin`, `demo_manager`, `demo_sales` with password `demo12345`.
+  - Use `python manage.py seed_demo_data --reset-passwords` to reset existing demo-user passwords.
 
 For production, switch to `DJANGO_SETTINGS_MODULE=config.settings.prod` and set
 the `POSTGRES_*` and `DJANGO_SECRET_KEY` values in `.env`.
@@ -666,28 +673,28 @@ Mark ↩️ REGRESSED if a previously-done milestone's acceptance check later fa
 |---|-----------|:------:|-------|
 | M0 | Project scaffold — Django 5 project, 9 apps skeleton, Vite + React 19 frontend | ✅ DONE | |
 | M1 | `core` — TimestampedModel, AuditedModel, AuditLog, CurrentUserMiddleware, signals | ✅ DONE | No tests yet (pre-test-framework) |
-| M2 | `accounts` — User model + 5 DRF permission classes + admin | ✅ DONE | Auth endpoints (login, logout, me) outstanding — tracked as G4; implement before M10 |
+| M2 | `accounts` — User model + 5 DRF permission classes + admin | ✅ DONE | Auth endpoints completed in M10; user role/deactivation changes are audited by `core.signals`. |
 | M3 | `customers` — Customer model + full CRUD API + tests | ✅ DONE | 6 tests passing; `apps/__init__.py` added to fix pytest package discovery |
-| M4 | `inventory` — Category, Item, ItemImage models + full CRUD API + tests | ✅ DONE | 18 tests passing; `clean()` enforces CONSIGNMENT/COMPANY ownership rules; serializer calls `clean()` via temp instance so API returns 400 on rule violations |
-| M5 | `sales` — Sale + Refund models, Sale.save() business logic, full CRUD API + tests | ✅ DONE | 14 tests passing; Sale.save() is @transaction.atomic; all 5 named §5.5 tests pass; mark-paid action at POST /api/v1/sales/{pk}/mark-paid/ (Manager+ only) |
-| M6 | `demands` — Demand model + suggest_matches + full CRUD API + tests | ⬜ TODO | |
-| M7 | `complaints` — Complaint model + auto ticket numbering + full CRUD API + tests | ⬜ TODO | |
-| M8 | `finance` — ExpenseCategory + Expense models + full CRUD API + tests | ⬜ TODO | |
-| M9 | `reports` — dashboard KPIs + all 8 report endpoints + tests | ⬜ TODO | No new models |
-| M10 | Frontend — axios client, AuthContext, ProtectedRoute, Login page | ⬜ TODO | Depends on G4 (auth endpoints) + M3 |
-| M11 | Frontend — Dashboard page (live data) | ⬜ TODO | Depends on M9, M10 |
-| M12 | Frontend — Customers CRUD pages | ⬜ TODO | Depends on M3, M10 |
-| M13 | Frontend — Inventory pages (Category browse + Item CRUD) | ⬜ TODO | Depends on M4, M10 |
-| M14 | Frontend — Sales pages + payout management | ⬜ TODO | Depends on M5, M10 |
-| M15 | Frontend — Demands + Complaints pages | ⬜ TODO | Depends on M6, M7, M10 |
-| M16 | Frontend — Finance + Reports pages (Admin/Manager only) | ⬜ TODO | Depends on M8, M9, M10 |
-| M17 | Frontend — Users list + Audit log viewer (Admin only) | ⬜ TODO | Depends on G4, M9, M10 |
+| M4 | `inventory` — Category, Item, ItemImage models + full CRUD API + tests | ✅ DONE | 23 tests passing; `clean()` enforces CONSIGNMENT/COMPANY ownership rules; serializer calls `clean()` via temp instance so API returns 400 on rule violations; Category DELETE is Admin-only; exact owner filter supports customer detail tabs; Sales can read categories but cannot create categories or publish items. |
+| M5 | `sales` — Sale + Refund models, Sale.save() business logic, full CRUD API + tests | ✅ DONE | 16 tests passing; Sale.save() is @transaction.atomic and owns creation-time payout/profit via model-owned helper; all 5 named §5.5 tests pass; mark-paid action at POST /api/v1/sales/{pk}/mark-paid/ (Manager+ only); profit audit command is read-only. |
+| M6 | `demands` — Demand model + suggest_matches + full CRUD API + tests | ✅ DONE | 7 tests passing; Demand extends AuditedModel; `suggest_matches()` filters ACTIVE items by category and target price range; GET `/api/v1/demands/{pk}/suggested-matches/` wired. |
+| M7 | `complaints` — Complaint model + auto ticket numbering + full CRUD API + tests | ✅ DONE | 9 tests passing; auto `TKT-00001` ticket numbering; ticket numbers immutable; transition to RESOLVED stamps `resolved_at`; complaint serializers expose customer/sale/assignee display fields for the frontend; `/api/v1/complaints/` wired. |
+| M8 | `finance` — ExpenseCategory + Expense models + full CRUD API + tests | ✅ DONE | 8 tests passing; Admin/Manager-only finance API; Sales users get 403; `/api/v1/expense-categories/` and `/api/v1/expenses/` wired; expenses expose `category_name` and support `start`/`end` date-range filters. |
+| M9 | `reports` — dashboard KPIs + all 8 report endpoints + tests | ✅ DONE | 9 tests passing; no models; report endpoints wired under `/api/v1/reports/`: dashboard, pending-payouts, sales, profit, expenses, demand-vs-supply, top-requested, audit-log. |
+| M10 | Frontend — axios client, AuthContext, ProtectedRoute, Login page | ✅ DONE | Auth endpoints wired: `/api/v1/me/`, `/api/v1/auth/login/`, `/api/v1/auth/logout/`, `/api/v1/users/`; frontend has axios CSRF client, `AuthContext`, `ProtectedRoute`, Login page, real logout, and user topbar. |
+| M11 | Frontend — Dashboard page (live data) | ✅ DONE | `/` is protected, calls `/api/v1/reports/dashboard/`, uses `PermissionGate` for Manager+ finance visibility, and renders live KPIs/recent sales via shared `DataTable` and `MoneyDisplay`. |
+| M12 | Frontend — Customers CRUD pages | ✅ DONE | `/customers`, `/customers/new`, and `/customers/:id` are protected and live; customer API/types added; create form posts to `/api/v1/customers/`; detail tabs read real owned items, purchases, demands, and complaints. Added exact `?owner=` filter on `/api/v1/items/` with regression test. |
+| M13 | Frontend — Inventory pages (Category browse + Item CRUD) | ✅ DONE | `/items`, `/items/new`, and `/items/:id` are protected and live; item list filters call `/api/v1/items/`; category browse/create calls `/api/v1/categories/`; new-item form has category-kind attributes and owner-type price rules; detail supports live update, withdraw, and Admin-only delete. |
+| M14 | Frontend — Sales pages + payout management | ✅ DONE | `/sales`, `/sales/new`, `/sales/:id`, and `/sales/payouts` are protected and live; sales list/detail/create call `/api/v1/sales/`; payout management calls `/api/v1/reports/pending-payouts/` and `POST /api/v1/sales/{id}/mark-paid/`; finance-sensitive frontend values are Manager/Admin gated. |
+| M15 | Frontend — Demands + Complaints pages | ✅ DONE | `/demands`, `/demands/:id`, `/complaints`, and `/complaints/:id` are protected and live; demand and complaint list/detail/create/update flows call real APIs; demand detail shows suggested matches and can link a matched item; complaint detail updates status, priority, and resolution notes. |
+| M16 | Frontend — Finance + Reports pages (Admin/Manager only) | ✅ DONE | `/expenses`, `/reports`, `/reports/sales`, and `/reports/profit` are protected and live; expenses list/create/category-create call real finance APIs; reports landing and detail pages call real dashboard, sales, profit, expense, demand/supply, and top-requested report endpoints; all finance views are Manager/Admin gated. |
+| M17 | Frontend — Users list + Audit log viewer | ✅ DONE | `/users` is protected, Admin-only, and calls `/api/v1/users/`; `/audit` is protected, Manager/Admin gated per §6, and calls `/api/v1/reports/audit-log/` with action/model/date filters plus Admin-only user filtering. |
 
 ---
 
 ### 14b. Completion protocol
 
-**Backend milestone (M3–M10) is ✅ DONE when ALL of the following hold:**
+**Backend milestone (M3–M9) is ✅ DONE when ALL of the following hold:**
 
 1. Every model has all fields, choices, and `on_delete` rules specified in §5.
 2. `python manage.py makemigrations --check` exits 0 (no pending schema drift).
@@ -697,7 +704,7 @@ Mark ↩️ REGRESSED if a previously-done milestone's acceptance check later fa
 6. `pytest` exits 0: at minimum one creation test + one business-rule test per model.
 7. No rule from the non-negotiables above is violated (DecimalField for money, AuditedModel inheritance, PROTECT FKs, Sale.save() owns profit math, no hard-delete outside Admin).
 
-**Frontend milestone (M11–M18) is ✅ DONE when ALL of the following hold:**
+**Frontend milestone (M10–M17) is ✅ DONE when ALL of the following hold:**
 
 1. Every route in §10 covered by the milestone is defined in App.tsx and renders without console errors.
 2. All API calls target real backend endpoints (no hardcoded or mocked data).
@@ -710,18 +717,19 @@ Mark a previously-done milestone ↩️ REGRESSED if any acceptance check above 
 
 ### 14c. What's built — snapshot
 
-> Last updated: session 7 (M5 `sales` — Sale + Refund models, Sale.save() business logic, mark-paid action, 14 tests passing)
+> Last updated: 2026-07-02 (demo seed data command; 86 tests passing)
 
 | Field | Value |
 |-------|-------|
-| Last completed milestone | M5 — `sales` Sale + Refund + Sale.save() profit math + mark-paid action |
-| Current milestone in progress | none — ready to start M6 (demands) |
-| Next milestone | M6 — Demand model + suggest_matches + full CRUD API |
-| Models with migrations applied | `core`, `accounts`, `customers`, `inventory`, `sales` — `migrate` applied, all `[x]` |
-| Tests passing | 38 / 38 — 6 customer + 18 inventory + 14 sales |
-| Backend health | `manage.py check` → 0 issues; `makemigrations --check` exits 0 (no drift) |
-| Frontend build | `npm run build` → ✓ (699 KB bundle, verified after brand re-skin) |
-| Frontend pages | 11 static-data pages + shared `Layout` component: Dashboard, Items, NewSale, CustomerDetail, Demands, Complaints, Expenses, PendingPayouts, Reports, AuditLog, Users. All routes wired in `App.tsx`. Full brand design system in place: IBM Plex Sans, brand navy `#1d3480` sidebar with gold `#f9a800` active accent, complete CSS custom-property token set in `index.css`, Tailwind color extensions in `tailwind.config.ts`. **Pages use hardcoded mock data — no API calls yet.** |
+| Last completed milestone | M17 — Frontend Users list + Audit log viewer |
+| Current milestone in progress | none — active M0–M17 build plan complete |
+| Next milestone | none — all active build-plan milestones are complete |
+| Models with migrations applied | `core`, `accounts`, `customers`, `inventory`, `sales`, `demands`, `complaints`, `finance` — `migrate` applied, all `[X]`; `reports` has no model migrations. |
+| Tests passing | 86 / 86 — 1 core/seed + 7 accounts/auth + 6 customer + 23 inventory + 16 sales + 7 demands + 9 complaints + 8 finance + 9 reports |
+| Backend health | `manage.py check` → 0 issues; `makemigrations --check --dry-run` → no changes detected |
+| Demo data | `python manage.py seed_demo_data` is implemented and idempotent; it creates demo users plus varied customers, inventory, sales, refunds, demands, complaints, expenses, payouts, and audit events for local workflow testing. |
+| Frontend build | `npm run build` → ✓ (907.80 KB JS bundle; Vite warns chunk is larger than 500 KB) |
+| Frontend pages | All §10 routes are protected and live. `/login` posts to the auth API; `/` calls `/api/v1/reports/dashboard/`; `/customers`, `/customers/new`, and `/customers/:id` call real customer and related-resource endpoints; `/items`, `/items/new`, and `/items/:id` call real category/item endpoints; `/sales`, `/sales/new`, `/sales/:id`, and `/sales/payouts` call real sales/report endpoints; `/demands` and `/demands/:id` call real demand and suggested-match endpoints; `/complaints` and `/complaints/:id` call real complaint endpoints; `/expenses` calls real expense and expense-category endpoints; `/reports`, `/reports/sales`, and `/reports/profit` call real report endpoints; `/users` calls the Admin-only users endpoint; `/audit` calls the audit-log report endpoint. Shared `Layout`, axios client, `AuthContext`, `ProtectedRoute`, `PermissionGate`, `DataTable`, `MoneyDisplay`, `StatusBadge`, and per-resource API/type/helper modules are implemented. No authenticated frontend pages still use static mock data. Actual `App.tsx` routes match §10: `/login`, `/`, `/customers`, `/customers/new`, `/customers/:id`, `/items`, `/items/new`, `/items/:id`, `/sales`, `/sales/new`, `/sales/:id`, `/sales/payouts`, `/payouts` → `/sales/payouts`, `/demands`, `/demands/:id`, `/complaints`, `/complaints/:id`, `/expenses`, `/reports`, `/reports/sales`, `/reports/profit`, `/audit`, `/users`. Full brand design system is in place in `index.css` and `tailwind.config.ts`. |
 
 ---
 
@@ -732,14 +740,8 @@ Remove an entry once it is fixed; add new entries as they are discovered.
 
 | # | Gap | Severity | Blocking | Resolution |
 |---|-----|:--------:|:--------:|------------|
-| G4 | Auth endpoints absent — §10 auth flow requires `/api/v1/me/`, `/api/v1/auth/login/`, `/api/v1/auth/logout/` which are not wired | High | M11 | M3 deliverable — now unblocked |
-| G11 | User model changes (role edits, deactivation) are not tracked in `AuditLog` — `User` extends `AbstractUser` not `AuditedModel`, so the audit signal never fires for user mutations. Confirmed: editing a user's role in the shell produces 0 `AuditLog` rows. Decision needed: (a) add a dedicated `post_save` receiver for User in `core.signals`; or (b) use Django's built-in session/admin log; or (c) document as accepted gap for internal CRM. Resolve before M10 adds auth endpoints that will create, log in, and edit users. | Medium | M10 | Decide approach before M10 |
 | G5 | `AuditLog.delete()` model-level guard is bypassable — Django `QuerySet.delete()` skips model `delete()`, so `AuditLog.objects.filter(...).delete()` would succeed silently | Low | — | Accepted risk for internal CRM; admin already blocks UI deletion |
 | G6 | `_pre_save_state` dict in `signals.py` can accumulate stale entries if `pre_save` fires but `post_save` never follows (e.g., mid-transaction exception rolls back) | Low | — | Acceptable at CRM scale; revisit if memory pressure observed |
-| G7 | `date-fns` v4 installed (v4.4.0) — timezone API changed significantly from v3; frontend date formatting must use v4 patterns | Info | M11 | Enforce v4 patterns when building date pickers and report filters |
-| G8 | `zod` v4 installed (v4.4.3) — schema inference syntax changed from v3; use `z.infer<typeof schema>` with v4 `.parse()` | Info | M11 | Enforce v4 patterns when building form validation |
-| G9 | `shadcn/ui` not installed — §3 lists it as a frontend dependency but it is absent from `package.json`. Only its prerequisites (`class-variance-authority`, `tailwind-merge`) are present. The frontend currently uses CSS custom properties + inline styles from the Claude Design system. Decision needed: (a) install shadcn/ui for component primitives, or (b) remove it from §3 and commit to the current design-system approach. | Medium | M11 | Decide before M11 begins |
-| G10 | All 11 frontend pages use hardcoded/static mock data — they faithfully reproduce the Claude Design mockups but have zero API integration. Each page will need conversion to real API calls, `AuthContext`, and `PermissionGate` during M11–M18. | Info | M11–M18 | Each M11–M18 milestone refactors its respective pages |
 
 ---
 
@@ -759,7 +761,7 @@ Reserved design space — do not build yet, but don't paint into a corner:
 
 #### Milestone detail (acceptance criteria)
 
-> **Note:** The detailed milestone numbers below (M0–M13) are from the original specification and use a different numbering than the active summary table above. Mapping: DETAIL M2 = TABLE M2 + M3 (split); DETAIL M3 = TABLE M4; DETAIL M10 = TABLE M11; DETAIL M11 = TABLE M12–M18. Use the **table above** for current status tracking.
+> **Note:** The detailed milestone numbers below (M0–M13) are from the original specification and use a different numbering than the active summary table above. Mapping: DETAIL M2 = TABLE M2 + M3 (split); DETAIL M3 = TABLE M4; DETAIL M10 = TABLE M10 + M11; DETAIL M11 = TABLE M12–M17. Use the **table above** for current status tracking.
 
 Build in this order. Do not move to the next milestone until the current one
 passes its acceptance check. After completing a milestone, stop and wait for
@@ -812,8 +814,8 @@ the next instruction.
 - `Sale` and `Refund` per §5.5. `Sale.save()` must compute payout and
   profit, bump `Item.quantity_sold`, transition `Item.status` to SOLD when
   stock hits zero, set `payout_status=PENDING` for consignment.
-- Endpoints: `/api/v1/sales/`, `/api/v1/refunds/`, plus a
-  `/api/v1/sales/payouts-pending/` listing.
+- Endpoints: `/api/v1/sales/`, `/api/v1/refunds/`. Pending-payout
+  reporting is owned by M9 at `/api/v1/reports/pending-payouts/`.
 - Mark-payout-paid action: `POST /api/v1/sales/{id}/mark-paid/`.
 - **Tests (required for this milestone):**
   - Profit calc for consignment, single unit

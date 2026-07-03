@@ -2,6 +2,7 @@ import datetime
 import pytest
 from decimal import Decimal
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from rest_framework.test import APIClient
 from apps.customers.models import Customer
 from apps.inventory.models import Category, Item
@@ -210,6 +211,7 @@ def test_mark_paid_transitions_payout_status(client, manager_user, admin_user, c
     assert resp.status_code == 200
     assert resp.data['payout_status'] == 'PAID'
     assert resp.data['payout_method'] == 'CASH'
+    assert resp.data['payout_handled_by_name'] == manager_user.username
 
     sale.refresh_from_db()
     assert sale.payout_status == Sale.PayoutStatus.PAID
@@ -260,6 +262,11 @@ def test_create_sale_via_api(client, admin_user, company_item, buyer):
     assert resp.status_code == 201
     assert resp.data['company_profit'] == '150.00'   # 450 - 300
     assert resp.data['payout_status'] == 'NA'
+    assert resp.data['item_title'] == company_item.title
+    assert resp.data['item_owner_type'] == 'COMPANY'
+    assert resp.data['item_cost_price'] == '300.00'
+    assert resp.data['buyer_name'] == buyer.full_name
+    assert resp.data['handled_by_name'] == admin_user.username
 
 
 @pytest.mark.django_db
@@ -379,3 +386,28 @@ def test_mark_paid_does_not_mutate_money_fields(client, manager_user, admin_user
     # 3. Payout fields are correctly updated
     assert sale.payout_status == Sale.PayoutStatus.PAID
     assert sale.payout_method == 'EVC_PLUS'
+
+
+@pytest.mark.django_db
+def test_recalculate_sale_profits_command_does_not_mutate_locked_money_fields(
+    admin_user, consignment_item, buyer,
+):
+    """The audit command may detect drift, but it must not rewrite Sale money fields."""
+    sale = make_sale(
+        consignment_item,
+        buyer,
+        admin_user,
+        quantity_sold=1,
+        sale_price=Decimal('600.00'),
+    )
+    Sale.objects.filter(pk=sale.pk).update(
+        owner_payout_amount=Decimal('1.00'),
+        company_profit=Decimal('2.00'),
+    )
+
+    with pytest.raises(SystemExit):
+        call_command('recalculate_sale_profits')
+
+    sale.refresh_from_db()
+    assert sale.owner_payout_amount == Decimal('1.00')
+    assert sale.company_profit == Decimal('2.00')

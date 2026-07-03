@@ -1,115 +1,228 @@
+import { useState } from 'react'
+import { Filter, RotateCcw, ShieldCheck, UserCheck } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+
+import { listUsers } from '@/api/accounts'
+import { getAuditLogReport } from '@/api/reports'
+import { useAuth } from '@/auth/AuthContext'
+import DataTable, { type Column } from '@/components/DataTable'
+import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import Layout from '@/components/Layout'
+import PageHeader from '@/components/PageHeader'
+import PermissionGate from '@/components/PermissionGate'
+import SummaryCard from '@/components/SummaryCard'
+import type { AuditAction, AuditLogRow } from '@/types/reports'
 
-const MODULE_STYLES: Record<string, { bg: string; fg: string }> = {
-  Sale: { bg: '#fff8e6', fg: '#c07800' },
-  Payout: { bg: '#e7f4ec', fg: '#1f7a4d' },
-  Item: { bg: '#e8ecf5', fg: '#1d3480' },
-  Customer: { bg: '#fbf0e0', fg: '#b45309' },
-  Match: { bg: '#f0f3fa', fg: '#5a6b8a' },
-  Expense: { bg: '#fbf0e0', fg: '#b45309' },
-  Complaint: { bg: '#e8ecf5', fg: '#1d3480' },
-  Demand: { bg: '#e7f4ec', fg: '#1f7a4d' },
-  User: { bg: '#fbe9e7', fg: '#b3261e' },
+const ACTIONS: AuditAction[] = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'CUSTOM']
+
+const ACTION_LABELS: Record<AuditAction, string> = {
+  CREATE: 'Create',
+  UPDATE: 'Update',
+  DELETE: 'Delete',
+  LOGIN: 'Login',
+  LOGOUT: 'Logout',
+  CUSTOM: 'Custom',
 }
 
-const groups = [
-  {
-    date: 'Today, 28 Jun 2026',
-    entries: [
-      { time: '09:42', actor: 'Axmed', action: 'created sale', detail: 'Toyota Vitz → Cabdiraxmaan', module: 'Sale' },
-      { time: '09:30', actor: 'Hodan', action: 'marked payout paid', detail: 'Coffee table · $80', module: 'Payout' },
-      { time: '09:12', actor: 'Yuusuf', action: 'created item', detail: 'HP EliteBook 840', module: 'Item' },
-      { time: '08:55', actor: 'Axmed', action: 'edited customer', detail: 'Maryan Cali', module: 'Customer' },
-      { time: '08:40', actor: 'System', action: 'auto-matched demand', detail: 'Office chairs × 6', module: 'Match' },
-    ],
-  },
-  {
-    date: 'Yesterday, 27 Jun 2026',
-    entries: [
-      { time: '17:20', actor: 'Hodan', action: 'created sale', detail: 'Generator → Cali', module: 'Sale' },
-      { time: '15:02', actor: 'Axmed', action: 'added expense', detail: 'Generator diesel · $120', module: 'Expense' },
-      { time: '11:48', actor: 'Yuusuf', action: 'resolved complaint', detail: 'Dining table', module: 'Complaint' },
-      { time: '09:15', actor: 'Hodan', action: 'created demand', detail: 'Solar panels', module: 'Demand' },
-    ],
-  },
-  {
-    date: '26 Jun 2026',
-    entries: [
-      { time: '16:30', actor: 'Axmed', action: 'invited user', detail: 'Cabdi Nuur', module: 'User' },
-      { time: '14:10', actor: 'Yuusuf', action: 'withdrew item', detail: 'Land Cruiser', module: 'Item' },
-      { time: '10:05', actor: 'Axmed', action: 'marked payout paid', detail: 'iPhone · $255', module: 'Payout' },
-    ],
-  },
-]
-
-const ACTOR_INITIALS: Record<string, string> = {
-  Axmed: 'AA',
-  Hodan: 'HM',
-  Yuusuf: 'YC',
-  Maryan: 'MF',
-  System: '⚙',
+const ACTION_STYLES: Record<AuditAction, { bg: string; fg: string }> = {
+  CREATE: { bg: 'var(--success-bg)', fg: 'var(--success)' },
+  UPDATE: { bg: 'var(--info-bg)', fg: 'var(--info)' },
+  DELETE: { bg: 'var(--danger-bg)', fg: 'var(--danger)' },
+  LOGIN: { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
+  LOGOUT: { bg: 'var(--neutral-bg)', fg: 'var(--neutral)' },
+  CUSTOM: { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
 }
 
-const ACTOR_BG: Record<string, string> = {
-  Axmed: '#f9a800',
-  Hodan: '#e7f4ec',
-  Yuusuf: '#e8ecf5',
-  Maryan: '#fbf0e0',
-  System: '#f0f3fa',
+type ActionFilter = 'all' | AuditAction
+
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
 }
 
-const ACTOR_FG: Record<string, string> = {
-  Axmed: '#1d3480',
-  Hodan: '#1f7a4d',
-  Yuusuf: '#1d3480',
-  Maryan: '#b45309',
-  System: '#5a6b8a',
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function weekStartISO() {
+  const date = new Date()
+  date.setDate(date.getDate() - 6)
+  return date.toISOString().slice(0, 10)
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+function formatValue(value: unknown) {
+  if (value === null || value === undefined || value === '') return 'empty'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
+function isOldNew(value: unknown): value is { old?: unknown; new?: unknown } {
+  return typeof value === 'object' && value !== null && ('old' in value || 'new' in value)
+}
+
+function changesSummary(changes: Record<string, unknown>) {
+  const entries = Object.entries(changes)
+  if (entries.length === 0) return '-'
+
+  const parts = entries.slice(0, 3).map(([field, value]) => {
+    if (isOldNew(value)) {
+      return `${field}: ${formatValue(value.old)} -> ${formatValue(value.new)}`
+    }
+    return `${field}: ${formatValue(value)}`
+  })
+
+  if (entries.length > 3) {
+    parts.push(`+${entries.length - 3} more`)
+  }
+  return parts.join('; ')
+}
+
+function ActionBadge({ action }: { action: AuditAction }) {
+  const style = ACTION_STYLES[action]
+  return (
+    <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 11px', borderRadius: 999, background: style.bg, color: style.fg }}>
+      {ACTION_LABELS[action]}
+    </span>
+  )
 }
 
 export default function AuditLog() {
+  const { user } = useAuth()
+  const [modelFilter, setModelFilter] = useState('')
+  const [action, setAction] = useState<ActionFilter>('all')
+  const [startDate, setStartDate] = useState(weekStartISO())
+  const [endDate, setEndDate] = useState(todayISO())
+  const [userFilter, setUserFilter] = useState<number | null>(null)
+  const enabled = !!user?.can_view_finance
+
+  const users = useQuery({
+    queryKey: ['users', 'audit-filter'],
+    queryFn: () => listUsers({ ordering: 'username' }),
+    enabled: !!user?.is_admin,
+  })
+
+  const audit = useQuery({
+    queryKey: ['audit-log', modelFilter, action, startDate, endDate, userFilter],
+    queryFn: () => getAuditLogReport({
+      model: modelFilter.trim() || undefined,
+      action: action === 'all' ? undefined : action,
+      start: startDate || undefined,
+      end: endDate || undefined,
+      user: user?.is_admin ? userFilter ?? undefined : undefined,
+    }),
+    enabled,
+  })
+
+  const rows = audit.data?.results ?? []
+  const createCount = rows.filter(row => row.action === 'CREATE').length
+  const updateCount = rows.filter(row => row.action === 'UPDATE').length
+  const authCount = rows.filter(row => row.action === 'LOGIN' || row.action === 'LOGOUT').length
+
+  const columns: Column<AuditLogRow>[] = [
+    {
+      key: 'timestamp',
+      header: 'Event',
+      render: row => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--primary-soft)', color: 'var(--primary-hover)' }}>
+            <ShieldCheck size={16} />
+          </span>
+          <span>
+            <strong style={{ display: 'block', color: 'var(--text)', fontWeight: 700 }}>{formatDateTime(row.timestamp)}</strong>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>{row.user || 'System'}</span>
+          </span>
+        </div>
+      ),
+    },
+    { key: 'action', header: 'Action', render: row => <ActionBadge action={row.action} /> },
+    { key: 'model_name', header: 'Model', render: row => <strong style={{ color: 'var(--text)' }}>{row.model_name}</strong> },
+    {
+      key: 'object',
+      header: 'Object',
+      render: row => (
+        <div>
+          <div style={{ fontWeight: 700 }}>{row.object_repr || '-'}</div>
+          {row.object_id && <div style={{ color: 'var(--muted)', fontSize: 12 }}>ID {row.object_id}</div>}
+        </div>
+      ),
+    },
+    { key: 'changes', header: 'Changes', render: row => <span style={{ color: 'var(--muted)' }}>{changesSummary(row.changes)}</span> },
+    { key: 'ip_address', header: 'IP', render: row => row.ip_address || '-' },
+  ]
+
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <div style={{ marginBottom: 24 }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>Audit log</h1>
-            <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }}>All system and staff activity</p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-            {groups.map(group => (
-              <div key={group.date}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>{group.date}</span>
-                  <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-                </div>
-
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-                  {group.entries.map((entry, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 20px', borderTop: i > 0 ? '1px solid var(--divider)' : undefined }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums', minWidth: 42, flexShrink: 0 }}>{entry.time}</span>
-
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACTOR_BG[entry.actor] ?? '#f9a800', color: ACTOR_FG[entry.actor] ?? '#1d3480', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: entry.actor === 'System' ? 14 : 11.5, fontWeight: 700, flexShrink: 0 }}>
-                        {ACTOR_INITIALS[entry.actor] ?? entry.actor.slice(0, 2).toUpperCase()}
-                      </div>
-
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 600 }}>{entry.actor}</span>
-                        <span style={{ fontSize: 13.5, color: 'var(--muted)', margin: '0 5px' }}>{entry.action}</span>
-                        <span style={{ fontSize: 13.5, fontWeight: 500 }}>{entry.detail}</span>
-                      </div>
-
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: MODULE_STYLES[entry.module]?.bg ?? '#eef2f7', color: MODULE_STYLES[entry.module]?.fg ?? '#6b7c93', flexShrink: 0 }}>
-                        {entry.module}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+      <PermissionGate minRole="MANAGER" fallback={
+        <div className="app-page">
+          <div className="card" style={{ padding: 22, color: 'var(--muted)' }}>Your role cannot view the audit log.</div>
         </div>
-      </div>
+      }>
+        <div className="app-page">
+          <PageHeader
+            eyebrow="Insights"
+            title="Audit log"
+            subtitle="Read-only timeline of staff actions and record changes."
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <SummaryCard label="Creates shown" value={createCount} caption="In current result set" icon={<ShieldCheck size={18} />} />
+            <SummaryCard label="Updates shown" value={updateCount} caption="In current result set" icon={<ShieldCheck size={18} />} tone="blue" />
+            <SummaryCard label="Auth events" value={authCount} caption="Login and logout events" icon={<UserCheck size={18} />} tone="amber" />
+            <SummaryCard label="Total events" value={audit.data?.count ?? rows.length} caption="Filtered result count" icon={<ShieldCheck size={18} />} tone="neutral" />
+          </div>
+
+          <DirectoryCard
+            title="Audit event directory"
+            count={audit.data ? `${audit.data.count} events found` : 'Loading events'}
+            toolbar={(
+              <DirectoryToolbar>
+                <SearchBox value={modelFilter} onChange={setModelFilter} placeholder="Exact model name" />
+                <input className="control" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} style={{ padding: '0 12px' }} />
+                <input className="control" type="date" value={endDate} onChange={event => setEndDate(event.target.value)} style={{ padding: '0 12px' }} />
+                <DirectorySelect value={action} onChange={value => setAction(value as ActionFilter)} ariaLabel="Audit action">
+                  <option value="all">All actions</option>
+                  {ACTIONS.map(nextAction => (
+                    <option key={nextAction} value={nextAction}>{ACTION_LABELS[nextAction]}</option>
+                  ))}
+                </DirectorySelect>
+                {user?.is_admin && (
+                  <DirectorySelect value={userFilter ?? 'all'} onChange={value => setUserFilter(value === 'all' ? null : Number(value))} ariaLabel="Audit user">
+                    <option value="all">All users</option>
+                    {(users.data?.results ?? []).map(row => (
+                      <option key={row.id} value={row.id}>{row.username}</option>
+                    ))}
+                  </DirectorySelect>
+                )}
+                <button type="button" className="primary-button" onClick={() => audit.refetch()}>
+                  <Filter size={16} />
+                  Filter
+                </button>
+                <button type="button" className="secondary-button" onClick={() => { setModelFilter(''); setAction('all'); setStartDate(weekStartISO()); setEndDate(todayISO()); setUserFilter(null) }}>
+                  <RotateCcw size={16} />
+                  Reset
+                </button>
+              </DirectoryToolbar>
+            )}
+          >
+            {audit.isLoading && <DirectorySkeleton />}
+            {audit.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(audit.error)}</div>}
+            {audit.data && <DataTable columns={columns} rows={rows} empty="No audit events match the current filters." variant="bare" />}
+          </DirectoryCard>
+        </div>
+      </PermissionGate>
     </Layout>
   )
 }
