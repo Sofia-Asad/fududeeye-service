@@ -1,0 +1,330 @@
+import { useMemo, useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, CircleDollarSign, Package, Save, Tags } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { z } from 'zod'
+
+import { listCustomers } from '@/api/customers'
+import { createItem, listCategories } from '@/api/inventory'
+import { useAuth } from '@/auth/AuthContext'
+import ActionFooter from '@/components/ActionFooter'
+import FormSection, { FieldLabel, FormGrid, SegmentedControl } from '@/components/FormSection'
+import Layout from '@/components/Layout'
+import PageHeader from '@/components/PageHeader'
+import PermissionGate from '@/components/PermissionGate'
+import {
+  ATTRIBUTE_FIELDS,
+  CATEGORY_KIND_LABELS,
+  CONDITION_LABELS,
+  ITEM_CONDITIONS,
+  compactAttributes,
+} from '@/lib/inventory'
+import type { ItemCondition, ItemStatus, OwnerType } from '@/types/inventory'
+
+const moneyPattern = /^\d+(\.\d{1,2})?$/
+
+const itemSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required.'),
+  category: z.string().trim().min(1, 'Category is required.'),
+  owner_type: z.enum(['COMPANY', 'CONSIGNMENT']),
+  owner: z.string().trim(),
+  owner_asking_price: z.string().trim(),
+  cost_price: z.string().trim(),
+  listed_price: z.string().trim().regex(moneyPattern, 'Use a valid amount.'),
+  quantity: z.string().trim().regex(/^[1-9]\d*$/, 'Quantity must be at least 1.'),
+  condition: z.enum(['NEW', 'USED', 'REFURBISHED']),
+  status: z.enum(['DRAFT', 'ACTIVE']),
+  location: z.string().trim(),
+  description: z.string().trim(),
+}).superRefine((value, ctx) => {
+  if (value.owner_type === 'CONSIGNMENT') {
+    if (!value.owner) {
+      ctx.addIssue({ code: 'custom', path: ['owner'], message: 'Owner is required for consignment.' })
+    }
+    if (!moneyPattern.test(value.owner_asking_price)) {
+      ctx.addIssue({ code: 'custom', path: ['owner_asking_price'], message: 'Use a valid asking price.' })
+    }
+  }
+  if (value.owner_type === 'COMPANY' && !moneyPattern.test(value.cost_price)) {
+    ctx.addIssue({ code: 'custom', path: ['cost_price'], message: 'Use a valid cost price.' })
+  }
+})
+
+type ItemFormValues = z.infer<typeof itemSchema>
+
+const emptyForm: ItemFormValues = {
+  title: '',
+  category: '',
+  owner_type: 'COMPANY',
+  owner: '',
+  owner_asking_price: '',
+  cost_price: '',
+  listed_price: '',
+  quantity: '1',
+  condition: 'USED',
+  status: 'DRAFT',
+  location: '',
+  description: '',
+}
+
+function apiErrorMessage(error: unknown) {
+  if (!(error instanceof AxiosError)) {
+    return 'Item could not be saved.'
+  }
+  const data = error.response?.data
+  if (data && typeof data === 'object') {
+    return Object.entries(data)
+      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : String(messages)}`)
+      .join(' ')
+  }
+  return error.response?.status ? `Item could not be saved (${error.response.status}).` : 'Item could not be saved.'
+}
+
+function moneyInputStyle(hasError?: boolean) {
+  return {
+    width: '100%',
+    padding: '0 12px 0 32px',
+    borderColor: hasError ? 'var(--danger)' : undefined,
+    background: hasError ? '#fffbfa' : undefined,
+  }
+}
+
+export default function NewItem() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const canManageInventory = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const [form, setForm] = useState<ItemFormValues>(emptyForm)
+  const [attributeValues, setAttributeValues] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const categories = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => listCategories({ ordering: 'name' }),
+  })
+
+  const customers = useQuery({
+    queryKey: ['customers', 'item-owner-picker'],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    enabled: form.owner_type === 'CONSIGNMENT',
+  })
+
+  const selectedCategory = useMemo(
+    () => (categories.data?.results ?? []).find(category => String(category.id) === form.category),
+    [categories.data?.results, form.category],
+  )
+  const attributeFields = selectedCategory ? ATTRIBUTE_FIELDS[selectedCategory.kind] : []
+
+  const create = useMutation({
+    mutationFn: createItem,
+    onSuccess: item => {
+      navigate(`/items/${item.id}`)
+    },
+  })
+
+  const basePrice = form.owner_type === 'CONSIGNMENT' ? Number(form.owner_asking_price || 0) : Number(form.cost_price || 0)
+  const listedPrice = Number(form.listed_price || 0)
+  const expectedMarkup = listedPrice - basePrice
+  const markupReady = listedPrice > 0 && basePrice >= 0
+
+  function updateField<K extends keyof ItemFormValues>(field: K, value: ItemFormValues[K]) {
+    setForm(current => {
+      const next = { ...current, [field]: value }
+      if (field === 'owner_type') {
+        next.owner = ''
+        next.owner_asking_price = ''
+        next.cost_price = ''
+      }
+      if (field === 'category') {
+        setAttributeValues({})
+      }
+      return next
+    })
+    setErrors(current => ({ ...current, [field]: '' }))
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const parsed = itemSchema.safeParse(form)
+    if (!parsed.success) {
+      const nextErrors: Record<string, string> = {}
+      parsed.error.issues.forEach(issue => {
+        const field = String(issue.path[0] ?? 'form')
+        if (!nextErrors[field]) nextErrors[field] = issue.message
+      })
+      setErrors(nextErrors)
+      return
+    }
+
+    const value = parsed.data
+    const ownerType = value.owner_type as OwnerType
+    create.mutate({
+      title: value.title,
+      description: value.description,
+      category: Number(value.category),
+      owner_type: ownerType,
+      owner: ownerType === 'CONSIGNMENT' ? Number(value.owner) : null,
+      owner_asking_price: ownerType === 'CONSIGNMENT' ? value.owner_asking_price : null,
+      cost_price: ownerType === 'COMPANY' ? value.cost_price : null,
+      listed_price: value.listed_price,
+      quantity: Number(value.quantity),
+      condition: value.condition as ItemCondition,
+      status: (canManageInventory ? value.status : 'DRAFT') as ItemStatus,
+      location: value.location,
+      attributes: compactAttributes(attributeValues, attributeFields),
+    })
+  }
+
+  return (
+    <Layout>
+      <div className="app-page">
+        <div className="app-page-narrow">
+          <Link to="/items" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--primary-hover)', fontSize: 13, fontWeight: 700, textDecoration: 'none', marginBottom: 14 }}>
+            <ArrowLeft size={16} />
+            Items
+          </Link>
+
+          <PageHeader
+            eyebrow="Manage"
+            title="New item"
+            subtitle="Category and owner type control the fields below."
+          />
+
+          <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
+            <FormSection icon={<Package size={18} />} title="Item basics" description="Describe the inventory record and where it will be tracked.">
+              <FormGrid>
+                <FieldLabel label="Title" required error={errors.title}>
+                  <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.title ? 'var(--danger)' : undefined, background: errors.title ? '#fffbfa' : undefined }} />
+                </FieldLabel>
+                <FieldLabel label="Category" required error={errors.category}>
+                  <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.category ? 'var(--danger)' : undefined, background: errors.category ? '#fffbfa' : undefined }}>
+                    <option value="">Choose category</option>
+                    {(categories.data?.results ?? []).map(category => (
+                      <option key={category.id} value={category.id}>{category.name} - {CATEGORY_KIND_LABELS[category.kind]}</option>
+                    ))}
+                  </select>
+                </FieldLabel>
+                <FieldLabel label="Quantity" required error={errors.quantity}>
+                  <input className="control" value={form.quantity} onChange={event => updateField('quantity', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px', borderColor: errors.quantity ? 'var(--danger)' : undefined, background: errors.quantity ? '#fffbfa' : undefined }} />
+                </FieldLabel>
+                <FieldLabel label="Condition">
+                  <select className="control" value={form.condition} onChange={event => updateField('condition', event.target.value as ItemCondition)} style={{ width: '100%', padding: '0 12px' }}>
+                    {ITEM_CONDITIONS.map(condition => (
+                      <option key={condition} value={condition}>{CONDITION_LABELS[condition]}</option>
+                    ))}
+                  </select>
+                </FieldLabel>
+                <FieldLabel label="Location">
+                  <input className="control" value={form.location} onChange={event => updateField('location', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                </FieldLabel>
+                <PermissionGate minRole="MANAGER">
+                  <FieldLabel label="Initial status">
+                    <select className="control" value={form.status} onChange={event => updateField('status', event.target.value as 'DRAFT' | 'ACTIVE')} style={{ width: '100%', padding: '0 12px' }}>
+                      <option value="DRAFT">Draft</option>
+                      <option value="ACTIVE">Active</option>
+                    </select>
+                  </FieldLabel>
+                </PermissionGate>
+              </FormGrid>
+              <FieldLabel label="Description" helper="Optional customer-facing notes for this item.">
+                <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </FieldLabel>
+            </FormSection>
+
+            <FormSection icon={<Tags size={18} />} title="Ownership" description="Choose whether this is company stock or a customer consignment." tone="amber">
+              <div style={{ display: 'grid', gap: 16 }}>
+                <FieldLabel label="Owner type">
+                  <SegmentedControl
+                    value={form.owner_type}
+                    onChange={value => updateField('owner_type', value)}
+                    options={[
+                      { value: 'COMPANY', label: 'Company stock' },
+                      { value: 'CONSIGNMENT', label: 'Consignment' },
+                    ]}
+                  />
+                </FieldLabel>
+
+                <FormGrid>
+                  {form.owner_type === 'CONSIGNMENT' ? (
+                    <>
+                      <FieldLabel label="Owner" required error={errors.owner}>
+                        <select className="control" value={form.owner} onChange={event => updateField('owner', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.owner ? 'var(--danger)' : undefined, background: errors.owner ? '#fffbfa' : undefined }}>
+                          <option value="">Choose customer</option>
+                          {(customers.data?.results ?? []).map(customer => (
+                            <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
+                          ))}
+                        </select>
+                      </FieldLabel>
+                      <FieldLabel label="Owner asking price" required error={errors.owner_asking_price}>
+                        <span style={{ position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
+                          <input className="control" value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} inputMode="decimal" style={moneyInputStyle(!!errors.owner_asking_price)} />
+                        </span>
+                      </FieldLabel>
+                    </>
+                  ) : (
+                    <FieldLabel label="Cost price" required error={errors.cost_price}>
+                      <span style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
+                        <input className="control" value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} inputMode="decimal" style={moneyInputStyle(!!errors.cost_price)} />
+                      </span>
+                    </FieldLabel>
+                  )}
+
+                  <FieldLabel label="Listed price" required error={errors.listed_price}>
+                    <span style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
+                      <input className="control" value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} inputMode="decimal" style={moneyInputStyle(!!errors.listed_price)} />
+                    </span>
+                  </FieldLabel>
+                </FormGrid>
+
+                <div style={{ border: '1px dashed #bcd6c9', borderRadius: 14, background: '#f3f7f4', padding: 15 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-hover)', fontWeight: 700 }}>
+                    <CircleDollarSign size={17} />
+                    Expected markup
+                  </div>
+                  <div className="serif" style={{ marginTop: 7, color: expectedMarkup >= 0 ? 'var(--primary-hover)' : 'var(--danger)', fontSize: 26, fontWeight: 700 }}>
+                    {markupReady ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expectedMarkup) : '$0.00'}
+                  </div>
+                  <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 12 }}>API values are authoritative after save.</div>
+                </div>
+              </div>
+            </FormSection>
+
+            {attributeFields.length > 0 && (
+              <FormSection icon={<Tags size={18} />} title={`${selectedCategory ? CATEGORY_KIND_LABELS[selectedCategory.kind] : ''} fields`} description="Category-specific attributes improve matching and filtering." tone="blue">
+                <FormGrid>
+                  {attributeFields.map(field => (
+                    <FieldLabel key={field.key} label={field.label}>
+                      {field.type === 'select' ? (
+                        <select className="control" value={attributeValues[field.key] ?? ''} onChange={event => setAttributeValues(current => ({ ...current, [field.key]: event.target.value }))} style={{ width: '100%', padding: '0 12px' }}>
+                          <option value="">Choose</option>
+                          {(field.options ?? []).map(option => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input className="control" value={attributeValues[field.key] ?? ''} onChange={event => setAttributeValues(current => ({ ...current, [field.key]: event.target.value }))} inputMode={field.type === 'number' ? 'numeric' : undefined} style={{ width: '100%', padding: '0 12px' }} />
+                      )}
+                    </FieldLabel>
+                  ))}
+                </FormGrid>
+              </FormSection>
+            )}
+
+            {create.isError && <div className="error-banner">{apiErrorMessage(create.error)}</div>}
+
+            <ActionFooter note="Sales role can only submit as Draft">
+              <Link to="/items" className="secondary-button">Cancel</Link>
+              <button type="submit" disabled={create.isPending || categories.isLoading} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
+                <Save size={16} />
+                {create.isPending ? 'Saving...' : 'Create item'}
+              </button>
+            </ActionFooter>
+          </form>
+        </div>
+      </div>
+    </Layout>
+  )
+}

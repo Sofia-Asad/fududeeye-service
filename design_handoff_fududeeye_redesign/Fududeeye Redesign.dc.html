@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<style>body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:3px;border:1px solid rgba(0,0,0,.1)}</style>
+</helmet>
+
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Customers list + login page, same style · developer handoff package linked below</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="6a">
+<div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a><strong style="color:#1a1a1a">Customers list + login</strong></div>
+
+<!-- ══ CUSTOMERS LIST ══ -->
+<div class="dv-card" style="width:1440px" data-screen-label="6a customers list">
+<div style="width:1440px;height:880px;display:flex;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a">
+  <div style="width:256px;background:#fbfaf5;border-right:1px solid #e9e6da;display:flex;flex-direction:column;flex:none">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 18px 16px">
+      <div style="width:38px;height:38px;background:#17795c;border-radius:11px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:19px;height:19px"></i></div>
+      <div><div style="font-size:17px;font-weight:600;line-height:1.05;color:#22302a">Fududeeye</div><div style="color:#9aa294;font-size:9.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+    </div>
+    <div style="padding:4px 14px 6px;display:flex;flex-direction:column;gap:1px;flex:1;overflow:hidden;justify-content:space-between">
+      <div style="padding:8px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">OVERVIEW</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="layout-dashboard" style="width:17px;height:17px;color:#75806f"></i>Dashboard</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MANAGE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#e6f1ea;color:#136a50;font-size:14px;font-weight:600;border-radius:10px"><i data-lucide="users" style="width:17px;height:17px"></i>Customers</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="package" style="width:17px;height:17px;color:#75806f"></i>Items</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shopping-cart" style="width:17px;height:17px;color:#75806f"></i>Sales</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="clipboard-list" style="width:17px;height:17px;color:#75806f"></i>Demands<span style="margin-left:auto;font-size:11px;font-weight:600;background:#e6f1ea;color:#17795c;padding:1px 8px;border-radius:9px">9</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="message-square-warning" style="width:17px;height:17px;color:#75806f"></i>Complaints<span style="margin-left:auto;font-size:11px;font-weight:600;background:#fbeae4;color:#c2482f;padding:1px 8px;border-radius:9px">4</span></div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MONEY</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="credit-card" style="width:17px;height:17px;color:#75806f"></i>Expenses</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="hand-coins" style="width:17px;height:17px;color:#75806f"></i>Payouts</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">INSIGHTS</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="chart-line" style="width:17px;height:17px;color:#75806f"></i>Reports</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shield-check" style="width:17px;height:17px;color:#75806f"></i>Audit log</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="user-cog" style="width:17px;height:17px;color:#75806f"></i>Users</div>
+    </div>
+    <div style="margin:8px 14px 12px;padding:11px 13px;background:#fff;border:1px solid #e9e6da;border-radius:12px;display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#17795c;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600">A</div>
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600">Aamina Khaliif</div><div style="color:#75806f;font-size:11px">Admin</div></div>
+      <i data-lucide="log-out" style="width:16px;height:16px;color:#9aa294;margin-left:auto"></i>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:24px 32px 0;display:flex;align-items:flex-start;gap:12px;flex:none">
+      <div><div style="font-size:13px;color:#75806f">Relationships</div><div style="font-family:'Source Serif 4',serif;font-size:31px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin-top:2px">Customers</div><div style="font-size:13.5px;color:#75806f;margin-top:4px">Buyers, consignment owners, and people with open demands.</div></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 16px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;font-size:13.5px;font-weight:500;color:#17795c"><i data-lucide="download" style="width:15px;height:15px"></i>Export</div>
+      <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 18px;background:#17795c;color:#fff;font-size:14px;font-weight:600;border-radius:10px;box-shadow:0 1px 2px rgba(23,121,92,.3)" style-hover="background:#136a50"><i data-lucide="user-plus" style="width:16px;height:16px"></i>New customer</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:20px 32px 24px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;flex:none">
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">ALL CUSTOMERS</div><div style="margin-left:auto;width:38px;height:38px;background:#e6f1ea;border-radius:12px;display:grid;place-items:center;color:#17795c;margin-top:-2px"><i data-lucide="users" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600">218</div><div style="font-size:12px;color:#75806f;margin-top:2px">12 added this month</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">CONSIGNMENT OWNERS</div><div style="margin-left:auto;width:38px;height:38px;background:#faf1de;border-radius:12px;display:grid;place-items:center;color:#b07818;margin-top:-2px"><i data-lucide="handshake" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600">64</div><div style="font-size:12px;color:#75806f;margin-top:2px">96 items on consignment</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">WITH OPEN DEMANDS</div><div style="margin-left:auto;width:38px;height:38px;background:#e8edf6;border-radius:12px;display:grid;place-items:center;color:#3d5aa8;margin-top:-2px"><i data-lucide="clipboard-list" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600">9</div><div style="font-size:12px;color:#75806f;margin-top:2px">2 matched, waiting contact</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">OWED PAYOUTS</div><div style="margin-left:auto;width:38px;height:38px;background:#fbeae4;border-radius:12px;display:grid;place-items:center;color:#c2482f;margin-top:-2px"><i data-lucide="clock" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600;color:#b2401f">$1,250</div><div style="font-size:12px;color:#75806f;margin-top:2px">3 owners waiting</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;flex:1;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+        <div style="padding:18px 24px 14px">
+          <div style="font-size:17px;font-weight:600">Customer directory</div>
+          <div style="font-size:12.5px;color:#75806f;margin-top:1px">218 customers · A–Z</div>
+          <div style="display:flex;gap:12px;margin-top:14px">
+            <div style="flex:1.6;display:flex;align-items:center;gap:9px;height:44px;border:1px solid #e5e1d3;border-radius:10px;padding:0 14px;color:#9aa294;font-size:13.5px"><i data-lucide="search" style="width:16px;height:16px"></i>Search name or phone</div>
+            <div style="flex:.7;display:flex;align-items:center;height:44px;border:1px solid #e5e1d3;border-radius:10px;padding:0 14px;font-size:13.5px;color:#3c4a42">All types<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div>
+            <div style="flex:.7;display:flex;align-items:center;height:44px;border:1px solid #e5e1d3;border-radius:10px;padding:0 14px;font-size:13.5px;color:#3c4a42">Sort: A–Z<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div>
+            <div style="height:44px;padding:0 24px;background:#17795c;color:#fff;border-radius:10px;display:grid;place-items:center;font-size:13.5px;font-weight:600" style-hover="background:#136a50">Filter</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1.1fr;padding:10px 24px;font-size:11px;font-weight:600;letter-spacing:.08em;color:#9aa294;background:#faf9f4;border-top:1px solid #f0eee3;border-bottom:1px solid #f0eee3">CUSTOMER<span>PHONE</span><span>TYPE</span><span style="text-align:right">PURCHASES</span><span style="text-align:right">ITEMS LISTED</span><span style="text-align:right">OWED PAYOUT</span></div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1.1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none">AA</span><span><span style="font-weight:600;display:block">Axmed Aweys</span><span style="font-size:11.5px;color:#75806f">CU-0003 · since Feb 2025</span></span></span><span style="color:#3c4a42">0907 511 240</span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#faf1de;color:#b07818">Owner + buyer</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">3</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">5</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600;color:#b2401f">$200</span></div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1.1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none">HM</span><span><span style="font-weight:600;display:block">Hodan Maxamuud</span><span style="font-size:11.5px;color:#75806f">CU-0009 · since Apr 2025</span></span></span><span style="color:#3c4a42">0907 442 118</span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#faf1de;color:#b07818">Owner + buyer</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">6</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">2</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600;color:#b2401f">$550</span></div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1.1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none">MF</span><span><span style="font-weight:600;display:block">Maryan Faarax</span><span style="font-size:11.5px;color:#75806f">CU-0014 · since Jun 2025</span></span></span><span style="color:#3c4a42">0907 380 664</span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e6f1ea;color:#17795c">Owner</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">1</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">4</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600;color:#b2401f">$500</span></div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1.1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none">YC</span><span><span style="font-weight:600;display:block">Yuusuf Cali</span><span style="font-size:11.5px;color:#75806f">CU-0021 · since Sep 2025</span></span></span><span style="color:#3c4a42">0907 615 902</span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e8edf6;color:#3d5aa8">Buyer</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">4</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600;color:#9aa294">—</span><span style="text-align:right;font-family:'Source Serif 4',serif;color:#9aa294">—</span></div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1.1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none">CN</span><span><span style="font-weight:600;display:block">Cabdiraxmaan Nuur</span><span style="font-size:11.5px;color:#75806f">CU-0027 · since Jan 2026</span></span></span><span style="color:#3c4a42">0907 728 315</span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e6f1ea;color:#17795c">Owner</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600;color:#9aa294">—</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">1</span><span style="text-align:right;font-family:'Source Serif 4',serif;color:#9aa294">—</span></div>
+        <div style="margin-top:auto;display:flex;align-items:center;padding:13px 24px;border-top:1px solid #f0eee3;font-size:13px;color:#75806f">Showing 1–5 of 218 customers
+          <div style="margin-left:auto;display:flex;align-items:center;gap:7px">
+            <span style="height:34px;padding:0 14px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;color:#c0bcab;font-size:13px">Previous</span>
+            <span style="width:34px;height:34px;background:#17795c;color:#fff;border-radius:9px;display:grid;place-items:center;font-weight:600;font-size:13px">1</span>
+            <span style="width:34px;height:34px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#3c4a42">2</span>
+            <span style="width:34px;height:34px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#3c4a42">3</span>
+            <span style="height:34px;padding:0 14px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#3c4a42">Next</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ LOGIN + MOBILE LOGIN ══ -->
+<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+<div class="dv-card" style="width:1100px" data-screen-label="6a login page">
+<div style="width:1100px;height:700px;display:flex;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a">
+  <div style="width:460px;background:#1c4a3c;padding:40px 44px;box-sizing:border-box;display:flex;flex-direction:column;flex:none">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:40px;height:40px;background:#2c5d4d;border-radius:12px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:20px;height:20px"></i></div>
+      <div><div style="color:#fff;font-size:18px;font-weight:600;line-height:1.05">Fududeeye</div><div style="color:#8fb3a5;font-size:9.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+    </div>
+    <div style="margin-top:auto">
+      <div style="font-family:'Source Serif 4',serif;font-size:30px;font-weight:600;color:#fff;line-height:1.25">You bring the item.<br>We find the buyer.<br>You get your price.</div>
+      <div style="font-size:13.5px;color:#a9c6ba;margin-top:14px;line-height:1.55">Internal system for Fududeeye staff — inventory, sales, payouts, and customer care in one place.</div>
+      <div style="display:flex;gap:20px;margin-top:26px;padding-top:20px;border-top:1px solid #2c5d4d">
+        <div><div style="font-family:'Source Serif 4',serif;font-size:21px;font-weight:600;color:#fff">218</div><div style="font-size:11px;color:#8fb3a5">customers</div></div>
+        <div><div style="font-family:'Source Serif 4',serif;font-size:21px;font-weight:600;color:#fff">153</div><div style="font-size:11px;color:#8fb3a5">items tracked</div></div>
+        <div><div style="font-family:'Source Serif 4',serif;font-size:21px;font-weight:600;color:#fff">$5,180</div><div style="font-size:11px;color:#8fb3a5">July profit</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="flex:1;display:grid;place-items:center;padding:40px">
+    <div style="width:380px">
+      <div style="font-family:'Source Serif 4',serif;font-size:26px;font-weight:600">Sign in</div>
+      <div style="font-size:13.5px;color:#75806f;margin-top:3px">Staff access only. Contact your admin for an account.</div>
+      <div style="margin-top:24px"><div style="font-size:13px;font-weight:500;margin-bottom:6px">Username</div><div style="height:46px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:13.5px"><i data-lucide="user" style="width:16px;height:16px;color:#9aa294"></i>aamina.khaliif</div></div>
+      <div style="margin-top:14px"><div style="display:flex;font-size:13px;font-weight:500;margin-bottom:6px">Password<a style="margin-left:auto;color:#17795c;font-weight:500;text-decoration:none;font-size:12.5px">Forgot?</a></div><div style="height:46px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:13.5px"><i data-lucide="lock" style="width:16px;height:16px;color:#9aa294"></i>••••••••••<i data-lucide="eye" style="width:16px;height:16px;color:#9aa294;margin-left:auto"></i></div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:#3c4a42"><span style="width:17px;height:17px;border:1.5px solid #17795c;border-radius:5px;background:#17795c;display:grid;place-items:center"><i data-lucide="check" style="width:11px;height:11px;color:#fff"></i></span>Keep me signed in on this device</div>
+      <div style="margin-top:20px;height:48px;background:#17795c;color:#fff;border-radius:10px;display:grid;place-items:center;font-size:14.5px;font-weight:600;box-shadow:0 1px 2px rgba(23,121,92,.3)" style-hover="background:#136a50">Sign in</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:18px;padding:11px 14px;background:#fff;border:1px solid #eceadf;border-radius:10px;font-size:12px;color:#75806f"><i data-lucide="shield-check" style="width:15px;height:15px;color:#17795c"></i>Session-based sign in. Your actions are recorded in the audit log.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-card" style="width:390px" data-screen-label="6a mobile login">
+<div style="width:390px;height:700px;background:#1c4a3c;font-family:Jost,sans-serif;display:flex;flex-direction:column">
+  <div style="padding:44px 28px 30px;text-align:center">
+    <div style="width:54px;height:54px;background:#2c5d4d;border-radius:16px;display:grid;place-items:center;color:#fff;margin:0 auto"><i data-lucide="store" style="width:26px;height:26px"></i></div>
+    <div style="color:#fff;font-size:21px;font-weight:600;margin-top:12px">Fududeeye</div>
+    <div style="color:#8fb3a5;font-size:9.5px;font-weight:600;letter-spacing:.2em;margin-top:2px">BROKERAGE CRM</div>
+  </div>
+  <div style="flex:1;background:#f6f4ed;border-radius:24px 24px 0 0;padding:26px 24px;color:#22302a">
+    <div style="font-family:'Source Serif 4',serif;font-size:23px;font-weight:600">Sign in</div>
+    <div style="font-size:12.5px;color:#75806f;margin-top:2px">Staff access only.</div>
+    <div style="margin-top:18px"><div style="font-size:12.5px;font-weight:500;margin-bottom:5px">Username</div><div style="height:46px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 13px;font-size:13px"><i data-lucide="user" style="width:15px;height:15px;color:#9aa294"></i>aamina.khaliif</div></div>
+    <div style="margin-top:12px"><div style="display:flex;font-size:12.5px;font-weight:500;margin-bottom:5px">Password<a style="margin-left:auto;color:#17795c;text-decoration:none;font-size:12px">Forgot?</a></div><div style="height:46px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 13px;font-size:13px"><i data-lucide="lock" style="width:15px;height:15px;color:#9aa294"></i>••••••••••<i data-lucide="eye" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:13px;font-size:12.5px;color:#3c4a42"><span style="width:17px;height:17px;border:1.5px solid #17795c;border-radius:5px;background:#17795c;display:grid;place-items:center"><i data-lucide="check" style="width:11px;height:11px;color:#fff"></i></span>Keep me signed in</div>
+    <div style="margin-top:18px;height:48px;background:#17795c;color:#fff;border-radius:11px;display:grid;place-items:center;font-size:14.5px;font-weight:600">Sign in</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding:10px 13px;background:#fff;border:1px solid #eceadf;border-radius:10px;font-size:11.5px;color:#75806f"><i data-lucide="shield-check" style="width:14px;height:14px;color:#17795c"></i>Actions are recorded in the audit log.</div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+<p class="dv-next">Handoff package: see <b>handoff/</b> folder in this project — HANDOFF.md with tokens, component specs, and per-route mapping for your React app.</p>
+</section>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Remaining screens — Sale detail (desktop + mobile) + design tokens, same style · sidebar now fills full height</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="5a">
+<div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a><strong style="color:#1a1a1a">Sale detail + tokens</strong> · completes the set: shell, dashboard, list, form, detail</div>
+
+<!-- ══ SALE DETAIL DESKTOP ══ -->
+<div class="dv-card" style="width:1440px" data-screen-label="5a sale detail">
+<div style="width:1440px;height:880px;display:flex;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a">
+  <div style="width:256px;background:#fbfaf5;border-right:1px solid #e9e6da;display:flex;flex-direction:column;flex:none">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 18px 16px">
+      <div style="width:38px;height:38px;background:#17795c;border-radius:11px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:19px;height:19px"></i></div>
+      <div><div style="font-size:17px;font-weight:600;line-height:1.05;color:#22302a">Fududeeye</div><div style="color:#9aa294;font-size:9.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+    </div>
+    <div style="padding:4px 14px 6px;display:flex;flex-direction:column;gap:1px;flex:1;overflow:hidden;justify-content:space-between">
+      <div style="padding:8px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">OVERVIEW</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="layout-dashboard" style="width:17px;height:17px;color:#75806f"></i>Dashboard</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MANAGE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="users" style="width:17px;height:17px;color:#75806f"></i>Customers</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="package" style="width:17px;height:17px;color:#75806f"></i>Items</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#e6f1ea;color:#136a50;font-size:14px;font-weight:600;border-radius:10px"><i data-lucide="shopping-cart" style="width:17px;height:17px"></i>Sales</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="clipboard-list" style="width:17px;height:17px;color:#75806f"></i>Demands<span style="margin-left:auto;font-size:11px;font-weight:600;background:#e6f1ea;color:#17795c;padding:1px 8px;border-radius:9px">9</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="message-square-warning" style="width:17px;height:17px;color:#75806f"></i>Complaints<span style="margin-left:auto;font-size:11px;font-weight:600;background:#fbeae4;color:#c2482f;padding:1px 8px;border-radius:9px">4</span></div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MONEY</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="credit-card" style="width:17px;height:17px;color:#75806f"></i>Expenses</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="hand-coins" style="width:17px;height:17px;color:#75806f"></i>Payouts</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">INSIGHTS</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="chart-line" style="width:17px;height:17px;color:#75806f"></i>Reports</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shield-check" style="width:17px;height:17px;color:#75806f"></i>Audit log</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="user-cog" style="width:17px;height:17px;color:#75806f"></i>Users</div>
+    </div>
+    <div style="margin:8px 14px 12px;padding:11px 13px;background:#fff;border:1px solid #e9e6da;border-radius:12px;display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#17795c;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600">A</div>
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600">Aamina Khaliif</div><div style="color:#75806f;font-size:11px">Admin</div></div>
+      <i data-lucide="log-out" style="width:16px;height:16px;color:#9aa294;margin-left:auto"></i>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:22px 32px 0;flex:none">
+      <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#17795c;font-weight:500"><i data-lucide="arrow-left" style="width:15px;height:15px"></i>Back to sales</div>
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-top:8px">
+        <div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="font-family:'Source Serif 4',serif;font-size:29px;font-weight:600;letter-spacing:-.01em">Sale SL-0047 · Samsung Galaxy S23</div><span style="font-size:12px;font-weight:600;padding:4px 13px;border-radius:99px;background:#e6f1ea;color:#17795c">Completed</span></div>
+          <div style="font-size:13.5px;color:#75806f;margin-top:3px">Sold 30 Jun 2026 · recorded by Sagal (Sales) · buyer Hodan Maxamuud · EVC Plus</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 16px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;font-size:13.5px;font-weight:500;color:#17795c"><i data-lucide="hand-coins" style="width:15px;height:15px"></i>Pay owner</div>
+        <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 16px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;font-size:13.5px;color:#3c4a42"><i data-lucide="printer" style="width:15px;height:15px"></i>Receipt</div>
+        <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 16px;background:#fff;border:1px solid #eddcd6;border-radius:10px;font-size:13.5px;color:#c2482f"><i data-lucide="rotate-ccw" style="width:15px;height:15px"></i>Refund</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:18px 32px 24px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;flex:none">
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">SALE PRICE</div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600;margin-top:3px">$620.00</div><div style="font-size:12px;color:#75806f;margin-top:2px">Qty 1 · EVC Plus</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">OWNER PAYOUT</div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600;margin-top:3px;color:#b2401f">$550.00</div><div style="font-size:12px;color:#c2482f;margin-top:2px;font-weight:500">Pending — due to Hodan M.</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">COMPANY PROFIT</div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600;margin-top:3px;color:#17795c">$70.00</div><div style="font-size:12px;color:#75806f;margin-top:2px">11.3% markup</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">PAYMENT STATUS</div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600;margin-top:3px">Paid</div><div style="font-size:12px;color:#75806f;margin-top:2px">Confirmed 30 Jun, 14:22</div></div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:1.55fr 1fr;gap:16px;min-height:0">
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+          <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 24px">
+            <div style="font-size:15.5px;font-weight:600">Sale details</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px;margin-top:8px">
+              <div style="display:flex;padding:9px 0;border-bottom:1px solid #f3f1e8;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Item</span><span style="font-weight:600;color:#17795c">Samsung Galaxy S23</span></div>
+              <div style="display:flex;padding:9px 0;border-bottom:1px solid #f3f1e8;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Buyer</span><span style="font-weight:600;color:#17795c">Hodan Maxamuud</span></div>
+              <div style="display:flex;padding:9px 0;border-bottom:1px solid #f3f1e8;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Owner</span><span style="font-weight:600">Hodan Maxamuud · Consignment</span></div>
+              <div style="display:flex;padding:9px 0;border-bottom:1px solid #f3f1e8;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Sale date</span><span style="font-weight:600">30 Jun 2026</span></div>
+              <div style="display:flex;padding:9px 0;border-bottom:1px solid #f3f1e8;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Asking price</span><span style="font-family:'Source Serif 4',serif;font-weight:600">$550.00 <span style="font-family:Jost;font-size:11px;color:#75806f;font-weight:400">locked at listing</span></span></div>
+              <div style="display:flex;padding:9px 0;border-bottom:1px solid #f3f1e8;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Payment method</span><span style="font-weight:600">EVC Plus</span></div>
+              <div style="display:flex;padding:9px 0;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Recorded by</span><span style="font-weight:600">Sagal Warsame <span style="font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:99px;background:#e8edf6;color:#3d5aa8">Sales</span></span></div>
+              <div style="display:flex;padding:9px 0;font-size:13px"><span style="color:#75806f;width:130px;flex:none">Reference</span><span style="font-weight:600">SL-0047 · EVC TXN 88214</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;flex:1;overflow:hidden;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;padding:14px 24px"><span style="font-size:15.5px;font-weight:600">Related records</span></div>
+            <div style="display:grid;grid-template-columns:1.6fr 1.4fr 1fr 1fr;padding:9px 24px;font-size:11px;font-weight:600;letter-spacing:.08em;color:#9aa294;background:#faf9f4;border-top:1px solid #f0eee3;border-bottom:1px solid #f0eee3">RECORD<span>DETAIL</span><span>STATUS</span><span style="text-align:right">AMOUNT</span></div>
+            <div style="display:grid;grid-template-columns:1.6fr 1.4fr 1fr 1fr;align-items:center;padding:11px 24px;font-size:13px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="font-weight:600;color:#17795c">Payout PO-0031</span><span style="color:#3c4a42">To Hodan Maxamuud</span><span><span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:99px;background:#faf1de;color:#b07818">Pending</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">$550.00</span></div>
+            <div style="display:grid;grid-template-columns:1.6fr 1.4fr 1fr 1fr;align-items:center;padding:11px 24px;font-size:13px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="font-weight:600;color:#17795c">Item SKU-0133</span><span style="color:#3c4a42">Samsung Galaxy S23</span><span><span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:99px;background:#efede4;color:#75806f">Sold</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-weight:600">$620.00</span></div>
+            <div style="display:grid;grid-template-columns:1.6fr 1.4fr 1fr 1fr;align-items:center;padding:11px 24px;font-size:13px" style-hover="background:#faf9f4"><span style="font-weight:600;color:#17795c">Customer CU-0009</span><span style="color:#3c4a42">Hodan Maxamuud · buyer &amp; owner</span><span><span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:99px;background:#e6f1ea;color:#17795c">Active</span></span><span style="text-align:right;color:#9aa294">—</span></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="font-size:15.5px;font-weight:600">Activity</div>
+          <div style="display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #f3f1e8"><div style="width:30px;height:30px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="check" style="width:14px;height:14px"></i></div><div style="font-size:12.5px"><b>Payment confirmed</b> — EVC Plus TXN 88214<div style="font-size:11px;color:#9aa294;margin-top:1px">30 Jun, 14:22 · Sagal</div></div></div>
+          <div style="display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #f3f1e8"><div style="width:30px;height:30px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;flex:none"><i data-lucide="hand-coins" style="width:14px;height:14px"></i></div><div style="font-size:12.5px"><b>Payout created</b> — PO-0031, $550.00 owed<div style="font-size:11px;color:#9aa294;margin-top:1px">30 Jun, 14:22 · system</div></div></div>
+          <div style="display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #f3f1e8"><div style="width:30px;height:30px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;flex:none"><i data-lucide="shopping-cart" style="width:14px;height:14px"></i></div><div style="font-size:12.5px"><b>Sale recorded</b> — $620.00, qty 1<div style="font-size:11px;color:#9aa294;margin-top:1px">30 Jun, 14:05 · Sagal</div></div></div>
+          <div style="margin-top:auto">
+            <div style="font-size:12.5px;font-weight:500;margin-bottom:6px">Add note</div>
+            <div style="height:64px;border:1px solid #e5e1d3;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#9aa294;box-sizing:border-box">Write an internal note…</div>
+            <div style="display:flex;margin-top:8px"><div style="margin-left:auto;height:34px;padding:0 16px;background:#17795c;color:#fff;border-radius:9px;display:grid;place-items:center;font-size:12.5px;font-weight:600">Post note</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ MOBILE DETAIL + TOKENS ══ -->
+<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+<div class="dv-card" style="width:390px" data-screen-label="5a mobile sale detail">
+<div style="width:390px;height:820px;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a;display:flex;flex-direction:column">
+  <div style="background:#fbfaf5;border-bottom:1px solid #e9e6da;padding:14px 16px;flex:none">
+    <div style="display:flex;align-items:center;gap:10px">
+      <i data-lucide="arrow-left" style="width:18px;height:18px;color:#3c4a42"></i>
+      <div style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600">Sale SL-0047</div>
+      <span style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:99px;background:#e6f1ea;color:#17795c">Completed</span>
+      <i data-lucide="ellipsis-vertical" style="width:17px;height:17px;color:#75806f;margin-left:auto"></i>
+    </div>
+    <div style="font-size:11.5px;color:#75806f;margin-top:3px">Samsung Galaxy S23 · 30 Jun 2026 · EVC Plus</div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:14px 16px;display:flex;flex-direction:column;gap:11px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+      <div style="background:#fff;border:1px solid #eceadf;border-radius:13px;padding:10px 12px"><div style="font-size:9px;font-weight:600;letter-spacing:.1em;color:#75806f">SALE</div><div style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;margin-top:2px">$620</div></div>
+      <div style="background:#fff;border:1px solid #eceadf;border-radius:13px;padding:10px 12px"><div style="font-size:9px;font-weight:600;letter-spacing:.1em;color:#75806f">PAYOUT</div><div style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;margin-top:2px;color:#b2401f">$550</div></div>
+      <div style="background:#fff;border:1px solid #eceadf;border-radius:13px;padding:10px 12px"><div style="font-size:9px;font-weight:600;letter-spacing:.1em;color:#75806f">PROFIT</div><div style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;margin-top:2px;color:#17795c">$70</div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:13px 16px">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:4px">Details</div>
+      <div style="display:flex;padding:8px 0;border-bottom:1px solid #f3f1e8;font-size:12.5px"><span style="color:#75806f;width:110px;flex:none">Buyer</span><span style="font-weight:600;color:#17795c">Hodan Maxamuud</span></div>
+      <div style="display:flex;padding:8px 0;border-bottom:1px solid #f3f1e8;font-size:12.5px"><span style="color:#75806f;width:110px;flex:none">Owner</span><span style="font-weight:600">Hodan M. · Consignment</span></div>
+      <div style="display:flex;padding:8px 0;border-bottom:1px solid #f3f1e8;font-size:12.5px"><span style="color:#75806f;width:110px;flex:none">Asking price</span><span style="font-family:'Source Serif 4',serif;font-weight:600">$550.00</span></div>
+      <div style="display:flex;padding:8px 0;border-bottom:1px solid #f3f1e8;font-size:12.5px"><span style="color:#75806f;width:110px;flex:none">Payment</span><span style="font-weight:600">EVC Plus · TXN 88214</span></div>
+      <div style="display:flex;padding:8px 0;font-size:12.5px"><span style="color:#75806f;width:110px;flex:none">Recorded by</span><span style="font-weight:600">Sagal Warsame</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:13px 16px;flex:1;overflow:hidden">
+      <div style="font-size:13.5px;font-weight:600">Activity</div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f3f1e8"><div style="width:28px;height:28px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="check" style="width:13px;height:13px"></i></div><div style="font-size:12px"><b>Payment confirmed</b><div style="font-size:10.5px;color:#9aa294">30 Jun, 14:22 · Sagal</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f3f1e8"><div style="width:28px;height:28px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;flex:none"><i data-lucide="hand-coins" style="width:13px;height:13px"></i></div><div style="font-size:12px"><b>Payout created</b> — $550.00<div style="font-size:10.5px;color:#9aa294">30 Jun, 14:22 · system</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;flex:none"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i></div><div style="font-size:12px"><b>Sale recorded</b> — $620.00<div style="font-size:10.5px;color:#9aa294">30 Jun, 14:05 · Sagal</div></div></div>
+    </div>
+  </div>
+  <div style="background:#fbfaf5;border-top:1px solid #e9e6da;padding:12px 16px;display:flex;gap:10px;flex:none">
+    <div style="flex:1.4;height:46px;background:#17795c;color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13.5px;font-weight:600"><i data-lucide="hand-coins" style="width:15px;height:15px"></i>Pay owner</div>
+    <div style="flex:1;height:46px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42;border-radius:11px;display:grid;place-items:center;font-size:13.5px">Receipt</div>
+    <div style="width:88px;height:46px;background:#fff;border:1px solid #eddcd6;color:#c2482f;border-radius:11px;display:grid;place-items:center;font-size:13.5px">Refund</div>
+  </div>
+</div>
+</div>
+
+<!-- ══ TOKENS SHEET ══ -->
+<div class="dv-card" style="width:700px" data-screen-label="5a design tokens">
+<div style="width:700px;background:#fff;font-family:Jost,sans-serif;color:#22302a;padding:26px 30px;box-sizing:border-box">
+  <div style="font-family:'Source Serif 4',serif;font-size:23px;font-weight:600">Design tokens</div>
+  <div style="font-size:12.5px;color:#75806f;margin-top:2px">For frontend/src/index.css + tailwind.config.ts</div>
+  <div style="font-size:12px;font-weight:600;letter-spacing:.1em;color:#9aa294;margin:18px 0 8px">COLOR</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12.5px">
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#17795c;flex:none"></span><b>primary</b>&nbsp;#17795C · buttons, active nav, links</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#136a50;flex:none"></span><b>primary-hover</b>&nbsp;#136A50</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#e6f1ea;flex:none;border:1px solid #eceadf"></span><b>primary-soft</b>&nbsp;#E6F1EA · badges, chips, active bg</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#e8a33d;flex:none"></span><b>accent</b>&nbsp;#E8A33D · charts, highlights</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#f6f4ed;flex:none;border:1px solid #eceadf"></span><b>canvas</b>&nbsp;#F6F4ED · page background</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#fbfaf5;flex:none;border:1px solid #eceadf"></span><b>sidebar</b>&nbsp;#FBFAF5 · surface #FFFFFF</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#faf1de;flex:none"></span><b>warning-soft</b>&nbsp;#FAF1DE · text #B07818</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#fbeae4;flex:none"></span><b>danger-soft</b>&nbsp;#FBEAE4 · text #C2482F</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#e8edf6;flex:none"></span><b>info-soft</b>&nbsp;#E8EDF6 · text #3D5AA8</div>
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;height:22px;border-radius:6px;background:#22302a;flex:none"></span><b>text</b>&nbsp;#22302A · muted #75806F · faint #9AA294</div>
+  </div>
+  <div style="font-size:12px;font-weight:600;letter-spacing:.1em;color:#9aa294;margin:18px 0 8px">TYPE · SPACE · SHAPE</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12.5px">
+    <div><b>UI font</b> — Jost 400/500/600 (body 13.5px, labels 13px)</div>
+    <div><b>Money &amp; headings</b> — Source Serif 4 600</div>
+    <div><b>Section labels</b> — 10–11px, 600, letter-spacing .12–.16em</div>
+    <div><b>Page title</b> — serif 29–31px · card title 15.5–17px</div>
+    <div><b>Radius</b> — cards 16px · inputs/buttons 10px · badges 99px</div>
+    <div><b>Borders</b> — #ECEADF cards · #E5E1D3 inputs · #F3F1E8 rows</div>
+    <div><b>Control height</b> — 42–44px desktop · 46px mobile footer</div>
+    <div><b>Shadow</b> — 0 1px 2px rgba(34,48,42,.03) · buttons: primary tint</div>
+  </div>
+  <div style="font-size:12px;font-weight:600;letter-spacing:.1em;color:#9aa294;margin:18px 0 8px">STATUS BADGES</div>
+  <div style="display:flex;flex-wrap:wrap;gap:7px;font-size:11.5px;font-weight:600">
+    <span style="padding:3px 12px;border-radius:99px;background:#e6f1ea;color:#17795c">Active / Paid / Resolved / Matched / Fulfilled</span>
+    <span style="padding:3px 12px;border-radius:99px;background:#faf1de;color:#b07818">Pending / Open / Draft</span>
+    <span style="padding:3px 12px;border-radius:99px;background:#e8edf6;color:#3d5aa8">Reserved / In progress</span>
+    <span style="padding:3px 12px;border-radius:99px;background:#fbeae4;color:#c2482f">Refunded / High / Overdue</span>
+    <span style="padding:3px 12px;border-radius:99px;background:#efede4;color:#75806f">Sold / Closed / Withdrawn / Dropped</span>
+  </div>
+  <div style="font-size:12px;font-weight:600;letter-spacing:.1em;color:#9aa294;margin:18px 0 8px">REUSE ACROSS ROUTES</div>
+  <div style="font-size:12.5px;color:#3c4a42;line-height:1.55">Every route uses the same 5 templates: <b>shell</b> (sidebar + page header), <b>list</b> (summary cards → directory card with search/filters above the table → paginated rows) for /customers /items /sales /demands /complaints /expenses /audit /users, <b>form</b> (sectioned cards + action footer) for all /new and /:id/edit, <b>detail</b> (metric cards + metadata + related records + activity) for all /:id, and the <b>dashboard</b>. Role gating: hide MONEY + INSIGHTS nav groups and finance columns for Sales role.</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+<p class="dv-next">Full set complete. Try: "show customers list" · "login page" · "hand off to my React developer"</p>
+</section>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Forest, refined — light sidebar matching the UI, green as accent only · full mobile prototype added · older options removed</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a">
+<div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a><strong style="color:#1a1a1a">Forest Light</strong> · Jost + Source Serif money · light sidebar <span class="sw" style="background:#fbfaf5"></span>cream canvas <span class="sw" style="background:#f6f4ed"></span>green accent <span class="sw" style="background:#17795c"></span>amber <span class="sw" style="background:#e8a33d"></span></div>
+
+<!-- ══ DASHBOARD ══ -->
+<div class="dv-card" style="width:1440px" data-screen-label="4a dashboard">
+<div style="width:1440px;height:880px;display:flex;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a">
+  <!-- light sidebar -->
+  <div style="width:256px;background:#fbfaf5;border-right:1px solid #e9e6da;display:flex;flex-direction:column;flex:none">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 18px 16px">
+      <div style="width:38px;height:38px;background:#17795c;border-radius:11px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:19px;height:19px"></i></div>
+      <div><div style="font-size:17px;font-weight:600;line-height:1.05;color:#22302a">Fududeeye</div><div style="color:#9aa294;font-size:9.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+      <i data-lucide="chevron-left" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i>
+    </div>
+    <div style="padding:4px 14px 6px;display:flex;flex-direction:column;gap:1px;flex:1;overflow:hidden;justify-content:space-between">
+      <div style="padding:8px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">OVERVIEW</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#e6f1ea;color:#136a50;font-size:14px;font-weight:600;border-radius:10px"><i data-lucide="layout-dashboard" style="width:17px;height:17px"></i>Dashboard</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MANAGE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="users" style="width:17px;height:17px;color:#75806f"></i>Customers</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="package" style="width:17px;height:17px;color:#75806f"></i>Items</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shopping-cart" style="width:17px;height:17px;color:#75806f"></i>Sales</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="clipboard-list" style="width:17px;height:17px;color:#75806f"></i>Demands<span style="margin-left:auto;font-size:11px;font-weight:600;background:#e6f1ea;color:#17795c;padding:1px 8px;border-radius:9px">9</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="message-square-warning" style="width:17px;height:17px;color:#75806f"></i>Complaints<span style="margin-left:auto;font-size:11px;font-weight:600;background:#fbeae4;color:#c2482f;padding:1px 8px;border-radius:9px">4</span></div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MONEY</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="credit-card" style="width:17px;height:17px;color:#75806f"></i>Expenses</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="hand-coins" style="width:17px;height:17px;color:#75806f"></i>Payouts</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">INSIGHTS</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="chart-line" style="width:17px;height:17px;color:#75806f"></i>Reports</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shield-check" style="width:17px;height:17px;color:#75806f"></i>Audit log</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="user-cog" style="width:17px;height:17px;color:#75806f"></i>Users</div>
+    </div>
+    <div style="margin:12px 14px;padding:11px 13px;background:#fff;border:1px solid #e9e6da;border-radius:12px;display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#17795c;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600">A</div>
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600">Aamina Khaliif</div><div style="color:#75806f;font-size:11px">Admin</div></div>
+      <i data-lucide="log-out" style="width:16px;height:16px;color:#9aa294;margin-left:auto"></i>
+    </div>
+  </div>
+  <!-- main -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:24px 32px 0;display:flex;align-items:flex-start;gap:12px;flex:none">
+      <div><div style="font-size:13px;color:#75806f">Fududeeye · Operations</div><div style="font-family:'Source Serif 4',serif;font-size:31px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin-top:2px">Dashboard</div></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:9px;height:42px;padding:0 16px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;font-size:13.5px;color:#3c4a42">July 2026<i data-lucide="calendar" style="width:15px;height:15px;color:#75806f"></i></div>
+      <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 18px;background:#17795c;color:#fff;font-size:14px;font-weight:600;border-radius:10px;box-shadow:0 1px 2px rgba(23,121,92,.3)" style-hover="background:#136a50"><i data-lucide="plus" style="width:16px;height:16px"></i>Record sale</div>
+      <div style="position:relative;width:42px;height:42px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:grid;place-items:center;color:#3c4a42"><i data-lucide="bell" style="width:17px;height:17px"></i><span style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#c2482f;color:#fff;font-size:9.5px;font-weight:700;border-radius:9px;display:grid;place-items:center;padding:0 4px">4</span></div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:20px 32px 24px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;flex:none">
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+          <div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">MONTH INCOME</div><div style="margin-left:auto;width:40px;height:40px;background:#e6f1ea;border-radius:12px;display:grid;place-items:center;color:#17795c;margin-top:-4px"><i data-lucide="banknote" style="width:18px;height:18px"></i></div></div>
+          <div style="font-family:'Source Serif 4',serif;font-size:30px;font-weight:600;margin-top:2px">$18,420</div>
+          <div style="font-size:12.5px;color:#75806f;margin-top:4px">47 sales · <span style="color:#17795c;font-weight:600">↑ 12% vs June</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+          <div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">FUDUDEEYE PROFIT</div><div style="margin-left:auto;width:40px;height:40px;background:#faf1de;border-radius:12px;display:grid;place-items:center;color:#b07818;margin-top:-4px"><i data-lucide="trending-up" style="width:18px;height:18px"></i></div></div>
+          <div style="font-family:'Source Serif 4',serif;font-size:30px;font-weight:600;margin-top:2px">$5,180</div>
+          <div style="font-size:12.5px;color:#75806f;margin-top:4px">Markup earned this month</div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+          <div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">PENDING PAYOUTS</div><div style="margin-left:auto;width:40px;height:40px;background:#fbeae4;border-radius:12px;display:grid;place-items:center;color:#c2482f;margin-top:-4px"><i data-lucide="clock" style="width:18px;height:18px"></i></div></div>
+          <div style="font-family:'Source Serif 4',serif;font-size:30px;font-weight:600;margin-top:2px;color:#b2401f">$1,250.00</div>
+          <div style="font-size:12.5px;color:#75806f;margin-top:4px">3 owners waiting to be paid</div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+          <div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">ACTIVE ITEMS</div><div style="margin-left:auto;width:40px;height:40px;background:#e8edf6;border-radius:12px;display:grid;place-items:center;color:#3d5aa8;margin-top:-4px"><i data-lucide="package" style="width:18px;height:18px"></i></div></div>
+          <div style="font-family:'Source Serif 4',serif;font-size:30px;font-weight:600;margin-top:2px">142</div>
+          <div style="font-size:12.5px;color:#75806f;margin-top:4px">11 reserved · 9 open demands</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;flex:none">
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:20px 24px;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+          <div style="display:flex;align-items:flex-start">
+            <div><div style="font-size:17px;font-weight:600">Income vs profit</div><div style="font-size:12.5px;color:#75806f;margin-top:1px">Last 6 months · USD</div></div>
+            <div style="margin-left:auto;display:flex;gap:16px;font-size:12.5px;color:#3c4a42;align-items:center"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#17795c"></span>Income</span><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#e8a33d"></span>Profit</span></div>
+          </div>
+          <svg viewBox="0 0 620 190" style="width:100%;height:170px;margin-top:10px;display:block">
+            <line x1="0" y1="30" x2="620" y2="30" stroke="#efede4" stroke-width="1"></line>
+            <line x1="0" y1="80" x2="620" y2="80" stroke="#efede4" stroke-width="1"></line>
+            <line x1="0" y1="130" x2="620" y2="130" stroke="#efede4" stroke-width="1"></line>
+            <line x1="0" y1="170" x2="620" y2="170" stroke="#e5e1d3" stroke-width="1"></line>
+            <polygon points="30,120 145,95 260,105 375,70 490,55 590,35 590,170 30,170" fill="#17795c" opacity="0.07"></polygon>
+            <polyline points="30,120 145,95 260,105 375,70 490,55 590,35" fill="none" stroke="#17795c" stroke-width="2.5"></polyline>
+            <polyline points="30,158 145,148 260,152 375,138 490,130 590,118" fill="none" stroke="#e8a33d" stroke-width="2.5" stroke-dasharray="6 5"></polyline>
+            <circle cx="30" cy="120" r="4" fill="#fff" stroke="#17795c" stroke-width="2.5"></circle><circle cx="145" cy="95" r="4" fill="#fff" stroke="#17795c" stroke-width="2.5"></circle><circle cx="260" cy="105" r="4" fill="#fff" stroke="#17795c" stroke-width="2.5"></circle><circle cx="375" cy="70" r="4" fill="#fff" stroke="#17795c" stroke-width="2.5"></circle><circle cx="490" cy="55" r="4" fill="#fff" stroke="#17795c" stroke-width="2.5"></circle><circle cx="590" cy="35" r="4" fill="#fff" stroke="#17795c" stroke-width="2.5"></circle>
+            <circle cx="30" cy="158" r="4" fill="#fff" stroke="#e8a33d" stroke-width="2.5"></circle><circle cx="145" cy="148" r="4" fill="#fff" stroke="#e8a33d" stroke-width="2.5"></circle><circle cx="260" cy="152" r="4" fill="#fff" stroke="#e8a33d" stroke-width="2.5"></circle><circle cx="375" cy="138" r="4" fill="#fff" stroke="#e8a33d" stroke-width="2.5"></circle><circle cx="490" cy="130" r="4" fill="#fff" stroke="#e8a33d" stroke-width="2.5"></circle><circle cx="590" cy="118" r="4" fill="#fff" stroke="#e8a33d" stroke-width="2.5"></circle>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#9aa294;padding:4px 10px 0"><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:20px 24px;box-shadow:0 1px 2px rgba(34,48,42,.03);display:flex;flex-direction:column">
+          <div style="font-size:17px;font-weight:600">Inventory</div>
+          <div style="display:grid;place-items:center;flex:1;padding:8px 0">
+            <div style="position:relative;width:150px;height:150px;border-radius:50%;background:conic-gradient(#17795c 0 87%,#e8ddc4 87% 100%)"><div style="position:absolute;inset:14px;background:#fff;border-radius:50%;display:grid;place-items:center"><div style="text-align:center"><div style="font-family:'Source Serif 4',serif;font-size:31px;font-weight:600">93%</div><div style="font-size:11.5px;color:#75806f;margin-top:-2px">listed &amp; live</div></div></div></div>
+          </div>
+          <div style="font-size:13px;color:#3c4a42;text-align:center"><b>142</b> of <b>153</b> items active</div>
+          <div style="display:flex;border-top:1px solid #efede4;margin-top:12px;padding-top:12px">
+            <div style="flex:1;text-align:center"><div style="font-family:'Source Serif 4',serif;font-size:22px;font-weight:600">142</div><div style="font-size:11.5px;color:#75806f">Active</div></div>
+            <div style="width:1px;background:#efede4"></div>
+            <div style="flex:1;text-align:center"><div style="font-family:'Source Serif 4',serif;font-size:22px;font-weight:600">11</div><div style="font-size:11.5px;color:#75806f">Reserved</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;min-height:0">
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#c2482f"></span><span style="font-size:15.5px;font-weight:600">Overdue payouts</span><a style="margin-left:auto;font-size:12.5px;color:#17795c;font-weight:600;text-decoration:none">View all</a></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f3f1e8"><div style="width:34px;height:34px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;font-size:12px;font-weight:600">MF</div><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Maryan Faarax</div><div style="font-size:11.5px;color:#75806f">HP EliteBook · sold 28 Jun</div></div><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;color:#b2401f">$500</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f3f1e8"><div style="width:34px;height:34px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;font-size:12px;font-weight:600">HM</div><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Hodan Maxamuud</div><div style="font-size:11.5px;color:#75806f">Galaxy S23 · sold 30 Jun</div></div><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;color:#b2401f">$550</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0"><div style="width:34px;height:34px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;font-size:12px;font-weight:600">AA</div><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Axmed Aweys</div><div style="font-size:11.5px;color:#75806f">Office chairs · sold 1 Jul</div></div><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;color:#b2401f">$200</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#17795c"></span><span style="font-size:15.5px;font-weight:600">Recent sales</span><a style="margin-left:auto;font-size:12.5px;color:#17795c;font-weight:600;text-decoration:none">View all</a></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f3f1e8"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Samsung Galaxy S23</div><div style="font-size:11.5px;color:#75806f">Hodan Maxamuud · EVC Plus</div></div><div style="text-align:right"><div style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$620</div><span style="font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:99px;background:#e6f1ea;color:#17795c">Paid</span></div></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f3f1e8"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Toyota Vitz 2016</div><div style="font-size:11.5px;color:#75806f">Axmed Aweys · Bank Transfer</div></div><div style="text-align:right"><div style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$6,800</div><span style="font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:99px;background:#faf1de;color:#b07818">Pending</span></div></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">HP EliteBook 840 G8</div><div style="font-size:11.5px;color:#75806f">Maryan Faarax · Cash</div></div><div style="text-align:right"><div style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$540</div><span style="font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:99px;background:#e6f1ea;color:#17795c">Paid</span></div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px;box-shadow:0 1px 2px rgba(34,48,42,.03);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#e8a33d"></span><span style="font-size:15.5px;font-weight:600">Open demands</span><a style="margin-left:auto;font-size:12.5px;color:#17795c;font-weight:600;text-decoration:none">View all</a></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f3f1e8"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Toyota Vitz / Passo</div><div style="font-size:11.5px;color:#75806f">3 customers waiting</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#e6f1ea;color:#17795c">Matched</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f3f1e8"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">iPhone 13 / 14</div><div style="font-size:11.5px;color:#75806f">2 customers waiting</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#faf1de;color:#b07818">Open</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 0"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Generator 5kVA</div><div style="font-size:11.5px;color:#75806f">1 customer waiting</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#faf1de;color:#b07818">Open</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ ITEMS LIST ══ -->
+<div class="dv-card" style="width:1440px" data-screen-label="4a items list">
+<div style="width:1440px;height:880px;display:flex;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a">
+  <div style="width:256px;background:#fbfaf5;border-right:1px solid #e9e6da;display:flex;flex-direction:column;flex:none">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 18px 16px">
+      <div style="width:38px;height:38px;background:#17795c;border-radius:11px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:19px;height:19px"></i></div>
+      <div><div style="font-size:17px;font-weight:600;line-height:1.05;color:#22302a">Fududeeye</div><div style="color:#9aa294;font-size:9.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+    </div>
+    <div style="padding:4px 14px 6px;display:flex;flex-direction:column;gap:1px;flex:1;overflow:hidden;justify-content:space-between">
+      <div style="padding:8px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">OVERVIEW</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="layout-dashboard" style="width:17px;height:17px;color:#75806f"></i>Dashboard</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MANAGE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="users" style="width:17px;height:17px;color:#75806f"></i>Customers</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#e6f1ea;color:#136a50;font-size:14px;font-weight:600;border-radius:10px"><i data-lucide="package" style="width:17px;height:17px"></i>Items</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shopping-cart" style="width:17px;height:17px;color:#75806f"></i>Sales</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="clipboard-list" style="width:17px;height:17px;color:#75806f"></i>Demands<span style="margin-left:auto;font-size:11px;font-weight:600;background:#e6f1ea;color:#17795c;padding:1px 8px;border-radius:9px">9</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="message-square-warning" style="width:17px;height:17px;color:#75806f"></i>Complaints<span style="margin-left:auto;font-size:11px;font-weight:600;background:#fbeae4;color:#c2482f;padding:1px 8px;border-radius:9px">4</span></div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MONEY</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="credit-card" style="width:17px;height:17px;color:#75806f"></i>Expenses</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="hand-coins" style="width:17px;height:17px;color:#75806f"></i>Payouts</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">INSIGHTS</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="chart-line" style="width:17px;height:17px;color:#75806f"></i>Reports</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shield-check" style="width:17px;height:17px;color:#75806f"></i>Audit log</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="user-cog" style="width:17px;height:17px;color:#75806f"></i>Users</div>
+    </div>
+    <div style="margin:12px 14px;padding:11px 13px;background:#fff;border:1px solid #e9e6da;border-radius:12px;display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#17795c;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600">A</div>
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600">Aamina Khaliif</div><div style="color:#75806f;font-size:11px">Admin</div></div>
+      <i data-lucide="log-out" style="width:16px;height:16px;color:#9aa294;margin-left:auto"></i>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:24px 32px 0;display:flex;align-items:flex-start;gap:12px;flex:none">
+      <div><div style="font-size:13px;color:#75806f">Inventory management</div><div style="font-family:'Source Serif 4',serif;font-size:31px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin-top:2px">Items</div><div style="font-size:13.5px;color:#75806f;margin-top:4px">Consignment and company stock, listing status, and pricing.</div></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 16px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;font-size:13.5px;font-weight:500;color:#17795c" style-hover="background:#f3f7f4"><i data-lucide="download" style="width:15px;height:15px"></i>Export</div>
+      <div style="display:flex;align-items:center;gap:8px;height:42px;padding:0 18px;background:#17795c;color:#fff;font-size:14px;font-weight:600;border-radius:10px;box-shadow:0 1px 2px rgba(23,121,92,.3)" style-hover="background:#136a50"><i data-lucide="plus" style="width:16px;height:16px"></i>New item</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:20px 32px 24px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;flex:none">
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">ALL ITEMS</div><div style="margin-left:auto;width:38px;height:38px;background:#e6f1ea;border-radius:12px;display:grid;place-items:center;color:#17795c;margin-top:-2px"><i data-lucide="package" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600">153</div><div style="font-size:12px;color:#75806f;margin-top:2px">Full inventory history</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">ACTIVE LISTINGS</div><div style="margin-left:auto;width:38px;height:38px;background:#e8edf6;border-radius:12px;display:grid;place-items:center;color:#3d5aa8;margin-top:-2px"><i data-lucide="badge-check" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600">142</div><div style="font-size:12px;color:#75806f;margin-top:2px">11 reserved for buyers</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">LISTED VALUE</div><div style="margin-left:auto;width:38px;height:38px;background:#faf1de;border-radius:12px;display:grid;place-items:center;color:#b07818;margin-top:-2px"><i data-lucide="banknote" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600">$86,400</div><div style="font-size:12px;color:#75806f;margin-top:2px">Across active items</div></div>
+        <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 20px"><div style="display:flex;align-items:flex-start"><div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">EXPECTED MARKUP</div><div style="margin-left:auto;width:38px;height:38px;background:#fbeae4;border-radius:12px;display:grid;place-items:center;color:#c2482f;margin-top:-2px"><i data-lucide="trending-up" style="width:17px;height:17px"></i></div></div><div style="font-family:'Source Serif 4',serif;font-size:27px;font-weight:600;color:#17795c">$11,730</div><div style="font-size:12px;color:#75806f;margin-top:2px">If all active items sell</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;flex:1;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 2px rgba(34,48,42,.03)">
+        <div style="padding:18px 24px 14px">
+          <div style="font-size:17px;font-weight:600">Item directory</div>
+          <div style="font-size:12.5px;color:#75806f;margin-top:1px">153 items found · Newest first</div>
+          <div style="display:flex;gap:12px;margin-top:14px">
+            <div style="flex:1.6;display:flex;align-items:center;gap:9px;height:44px;border:1px solid #e5e1d3;border-radius:10px;padding:0 14px;color:#9aa294;font-size:13.5px"><i data-lucide="search" style="width:16px;height:16px"></i>Search item, owner, or category</div>
+            <div style="flex:.7;display:flex;align-items:center;height:44px;border:1px solid #e5e1d3;border-radius:10px;padding:0 14px;font-size:13.5px;color:#3c4a42">All statuses<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div>
+            <div style="flex:.7;display:flex;align-items:center;height:44px;border:1px solid #e5e1d3;border-radius:10px;padding:0 14px;font-size:13.5px;color:#3c4a42">All owners<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div>
+            <div style="height:44px;padding:0 24px;background:#17795c;color:#fff;border-radius:10px;display:grid;place-items:center;font-size:13.5px;font-weight:600" style-hover="background:#136a50">Filter</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:2.5fr 1.2fr 1.6fr 1.1fr 1fr 1fr 1fr;padding:10px 24px;font-size:11px;font-weight:600;letter-spacing:.08em;color:#9aa294;background:#faf9f4;border-top:1px solid #f0eee3;border-bottom:1px solid #f0eee3">ITEM<span>CATEGORY</span><span>OWNER</span><span>STATUS</span><span style="text-align:right">LISTED</span><span style="text-align:right">ASKING</span><span style="text-align:right">MARKUP</span></div>
+        <div style="display:grid;grid-template-columns:2.5fr 1.2fr 1.6fr 1.1fr 1fr 1fr 1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="laptop" style="width:17px;height:17px"></i></span><span><span style="font-weight:600;display:block">HP EliteBook 840 G8</span><span style="font-size:11.5px;color:#75806f">SKU-0148 · added 25 Jun</span></span></span><span style="color:#3c4a42">Electronics</span><span style="color:#3c4a42">Maryan Faarax<span style="display:block;font-size:11px;color:#b07818;font-weight:600">Consignment</span></span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e6f1ea;color:#17795c">Active</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600">$620</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;color:#3c4a42">$500</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600;color:#17795c">$120</span></div>
+        <div style="display:grid;grid-template-columns:2.5fr 1.2fr 1.6fr 1.1fr 1fr 1fr 1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;flex:none"><i data-lucide="car" style="width:17px;height:17px"></i></span><span><span style="font-weight:600;display:block">Toyota Vitz 2016</span><span style="font-size:11.5px;color:#75806f">SKU-0141 · added 20 Jun</span></span></span><span style="color:#3c4a42">Vehicles</span><span style="color:#3c4a42">Axmed Aweys<span style="display:block;font-size:11px;color:#b07818;font-weight:600">Consignment</span></span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e8edf6;color:#3d5aa8">Reserved</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600">$6,800</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;color:#3c4a42">$6,200</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600;color:#17795c">$600</span></div>
+        <div style="display:grid;grid-template-columns:2.5fr 1.2fr 1.6fr 1.1fr 1fr 1fr 1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;flex:none"><i data-lucide="armchair" style="width:17px;height:17px"></i></span><span><span style="font-weight:600;display:block">Office chairs set</span><span style="font-size:11.5px;color:#75806f">SKU-0139 · added 18 Jun</span></span></span><span style="color:#3c4a42">Furniture</span><span style="color:#17795c;font-weight:600">Company stock</span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e6f1ea;color:#17795c">Active</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600">$310</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;color:#9aa294">—</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600;color:#17795c">$120</span></div>
+        <div style="display:grid;grid-template-columns:2.5fr 1.2fr 1.6fr 1.1fr 1fr 1fr 1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="smartphone" style="width:17px;height:17px"></i></span><span><span style="font-weight:600;display:block">Samsung Galaxy S23</span><span style="font-size:11.5px;color:#75806f">SKU-0133 · added 12 Jun</span></span></span><span style="color:#3c4a42">Electronics</span><span style="color:#3c4a42">Hodan Maxamuud<span style="display:block;font-size:11px;color:#b07818;font-weight:600">Consignment</span></span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#efede4;color:#75806f">Sold</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600">$620</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;color:#3c4a42">$550</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600;color:#17795c">$70</span></div>
+        <div style="display:grid;grid-template-columns:2.5fr 1.2fr 1.6fr 1.1fr 1fr 1fr 1fr;align-items:center;padding:13px 24px;font-size:13.5px;border-bottom:1px solid #f3f1e8" style-hover="background:#faf9f4"><span style="display:flex;align-items:center;gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#fbeae4;color:#c2482f;display:grid;place-items:center;flex:none"><i data-lucide="building-2" style="width:17px;height:17px"></i></span><span><span style="font-weight:600;display:block">Two-bedroom apartment</span><span style="font-size:11.5px;color:#75806f">SKU-0128 · added 5 Jun</span></span></span><span style="color:#3c4a42">Real estate</span><span style="color:#3c4a42">Cabdiraxmaan Nuur<span style="display:block;font-size:11px;color:#b07818;font-weight:600">Consignment</span></span><span><span style="font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:99px;background:#e6f1ea;color:#17795c">Active</span></span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600">$24,000</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;color:#3c4a42">$22,000</span><span style="text-align:right;font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600;color:#17795c">$2,000</span></div>
+        <div style="margin-top:auto;display:flex;align-items:center;padding:13px 24px;border-top:1px solid #f0eee3;font-size:13px;color:#75806f">Showing 1–5 of 153 items
+          <div style="margin-left:auto;display:flex;align-items:center;gap:7px">
+            <span style="height:34px;padding:0 14px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;color:#c0bcab;font-size:13px">Previous</span>
+            <span style="width:34px;height:34px;background:#17795c;color:#fff;border-radius:9px;display:grid;place-items:center;font-weight:600;font-size:13px">1</span>
+            <span style="width:34px;height:34px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#3c4a42">2</span>
+            <span style="width:34px;height:34px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#3c4a42">3</span>
+            <span style="height:34px;padding:0 14px;border:1px solid #e5e1d3;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#3c4a42">Next</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ FORM + MOBILE ROW ══ -->
+<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+<div class="dv-card" style="width:1440px" data-screen-label="4a new item form">
+<div style="width:1440px;height:1150px;display:flex;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a">
+  <div style="width:256px;background:#fbfaf5;border-right:1px solid #e9e6da;display:flex;flex-direction:column;flex:none">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 18px 16px">
+      <div style="width:38px;height:38px;background:#17795c;border-radius:11px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:19px;height:19px"></i></div>
+      <div><div style="font-size:17px;font-weight:600;line-height:1.05;color:#22302a">Fududeeye</div><div style="color:#9aa294;font-size:9.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+    </div>
+    <div style="padding:4px 14px 6px;display:flex;flex-direction:column;gap:1px;flex:1;overflow:hidden;justify-content:space-between">
+      <div style="padding:8px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">OVERVIEW</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="layout-dashboard" style="width:17px;height:17px;color:#75806f"></i>Dashboard</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MANAGE</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="users" style="width:17px;height:17px;color:#75806f"></i>Customers</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#e6f1ea;color:#136a50;font-size:14px;font-weight:600;border-radius:10px"><i data-lucide="package" style="width:17px;height:17px"></i>Items</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shopping-cart" style="width:17px;height:17px;color:#75806f"></i>Sales</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="clipboard-list" style="width:17px;height:17px;color:#75806f"></i>Demands<span style="margin-left:auto;font-size:11px;font-weight:600;background:#e6f1ea;color:#17795c;padding:1px 8px;border-radius:9px">9</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="message-square-warning" style="width:17px;height:17px;color:#75806f"></i>Complaints<span style="margin-left:auto;font-size:11px;font-weight:600;background:#fbeae4;color:#c2482f;padding:1px 8px;border-radius:9px">4</span></div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">MONEY</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="credit-card" style="width:17px;height:17px;color:#75806f"></i>Expenses</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="hand-coins" style="width:17px;height:17px;color:#75806f"></i>Payouts</div>
+      <div style="padding:12px 10px 5px;font-size:10px;font-weight:600;letter-spacing:.16em;color:#9aa294">INSIGHTS</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="chart-line" style="width:17px;height:17px;color:#75806f"></i>Reports</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="shield-check" style="width:17px;height:17px;color:#75806f"></i>Audit log</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;color:#3c4a42;font-size:14px;border-radius:10px" style-hover="background:#f0eee3"><i data-lucide="user-cog" style="width:17px;height:17px;color:#75806f"></i>Users</div>
+    </div>
+    <div style="margin:12px 14px;padding:11px 13px;background:#fff;border:1px solid #e9e6da;border-radius:12px;display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#17795c;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600">A</div>
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600">Aamina Khaliif</div><div style="color:#75806f;font-size:11px">Admin</div></div>
+      <i data-lucide="log-out" style="width:16px;height:16px;color:#9aa294;margin-left:auto"></i>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;overflow:hidden">
+  <div style="max-width:940px;padding:26px 36px 0;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#17795c;font-weight:500"><i data-lucide="arrow-left" style="width:15px;height:15px"></i>Back to items</div>
+  <div style="font-family:'Source Serif 4',serif;font-size:29px;font-weight:600;margin-top:8px">New item</div>
+  <div style="font-size:13.5px;color:#75806f;margin-top:3px">List a consignment or company-owned item for sale.</div>
+  <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;margin-top:20px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid #f0eee3">
+      <div style="width:38px;height:38px;background:#e6f1ea;border-radius:11px;display:grid;place-items:center;color:#17795c"><i data-lucide="package" style="width:17px;height:17px"></i></div>
+      <div><div style="font-size:15.5px;font-weight:600">Item information</div><div style="font-size:12px;color:#75806f">What is being sold.</div></div>
+    </div>
+    <div style="padding:18px 24px 22px;display:flex;flex-direction:column;gap:16px">
+      <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Title <span style="color:#c2482f">*</span></div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px;color:#22302a;background:#fff">HP EliteBook 840 G8 — 16GB / 512GB</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Category <span style="color:#c2482f">*</span></div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px;color:#22302a">Electronics<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div></div>
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Condition</div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px;color:#22302a">Used — excellent<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div></div>
+      </div>
+      <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Description</div><div style="height:76px;border:1px solid #e5e1d3;border-radius:10px;padding:11px 14px;font-size:13.5px;color:#9aa294;box-sizing:border-box">Condition notes, specs, and anything a buyer should know…</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Quantity</div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px">1</div></div>
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Location</div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px;color:#9aa294">e.g. Main store, Galkayo</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;margin-top:16px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid #f0eee3">
+      <div style="width:38px;height:38px;background:#faf1de;border-radius:11px;display:grid;place-items:center;color:#b07818"><i data-lucide="hand-coins" style="width:17px;height:17px"></i></div>
+      <div><div style="font-size:15.5px;font-weight:600">Ownership &amp; pricing</div><div style="font-size:12px;color:#75806f">The owner's asking price is locked at listing. Fududeeye keeps the markup.</div></div>
+    </div>
+    <div style="padding:18px 24px 22px;display:flex;flex-direction:column;gap:16px">
+      <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Owner type <span style="color:#c2482f">*</span></div>
+        <div style="display:inline-flex;background:#f0eee3;border-radius:10px;padding:4px;font-size:13px;font-weight:500">
+          <span style="padding:8px 22px;border-radius:8px;background:#fff;color:#136a50;font-weight:600;box-shadow:0 1px 2px rgba(34,48,42,.1)">Consignment</span>
+          <span style="padding:8px 22px;color:#75806f">Company stock</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Owner (customer) <span style="color:#c2482f">*</span></div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;gap:9px;padding:0 14px;font-size:13.5px"><span style="width:26px;height:26px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;font-size:10px;font-weight:600">MF</span>Maryan Faarax · 0907 442 118<i data-lucide="chevron-down" style="width:15px;height:15px;color:#9aa294;margin-left:auto"></i></div></div>
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Owner asking price (USD) <span style="color:#c2482f">*</span></div><div style="height:44px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px"><span style="color:#9aa294;margin-right:8px">$</span>500.00</div><div style="font-size:11.5px;color:#75806f;margin-top:5px">Locked once the item is listed. Paid to the owner on sale.</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Listed price (USD) <span style="color:#c2482f">*</span></div><div style="height:44px;border:1.5px solid #c2482f;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px;background:#fffbfa"><span style="color:#9aa294;margin-right:8px">$</span>480.00</div><div style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:#c2482f;margin-top:5px;font-weight:500"><i data-lucide="alert-circle" style="width:13px;height:13px"></i>Listed price must be above the owner's asking price.</div></div>
+        <div><div style="font-size:13px;font-weight:500;margin-bottom:6px">Your markup</div><div style="height:44px;background:#f3f7f4;border:1px dashed #bcd6c9;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:13.5px;color:#17795c;font-weight:600">−$20.00 · fix listed price</div><div style="font-size:11.5px;color:#75806f;margin-top:5px">Calculated automatically. API values are authoritative after save.</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:20px;padding:14px 0 26px;border-top:1px solid #e5e1d3;display:flex;align-items:center;gap:10px">
+    <div style="height:44px;padding:0 24px;background:#17795c;color:#fff;border-radius:10px;display:grid;place-items:center;font-size:14px;font-weight:600;box-shadow:0 1px 2px rgba(23,121,92,.3)" style-hover="background:#136a50">Create item</div>
+    <div style="height:44px;padding:0 20px;background:#e6f1ea;color:#17795c;border-radius:10px;display:grid;place-items:center;font-size:14px;font-weight:600">Save as draft</div>
+    <div style="height:44px;padding:0 20px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42;border-radius:10px;display:grid;place-items:center;font-size:14px">Cancel</div>
+    <div style="margin-left:auto;font-size:12px;color:#9aa294">Sales role can only submit as Draft</div>
+  </div>
+  </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ MOBILE ══ -->
+<div class="dv-card" style="width:390px" data-screen-label="4a mobile dashboard">
+<div style="width:390px;height:820px;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a;display:flex;flex-direction:column">
+  <div style="background:#fbfaf5;border-bottom:1px solid #e9e6da;padding:12px 16px;display:flex;align-items:center;gap:10px;flex:none">
+    <div style="width:32px;height:32px;background:#17795c;border-radius:9px;display:grid;place-items:center;color:#fff"><i data-lucide="store" style="width:16px;height:16px"></i></div>
+    <div><div style="font-size:15px;font-weight:600;line-height:1.1">Fududeeye</div><div style="color:#9aa294;font-size:8.5px;font-weight:600;letter-spacing:.18em">BROKERAGE CRM</div></div>
+    <div style="margin-left:auto;position:relative;width:36px;height:36px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:grid;place-items:center;color:#3c4a42"><i data-lucide="bell" style="width:16px;height:16px"></i><span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:#c2482f;color:#fff;font-size:9px;font-weight:700;border-radius:8px;display:grid;place-items:center;padding:0 3px">4</span></div>
+    <div style="width:36px;height:36px;border-radius:50%;background:#17795c;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600">A</div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px">
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px 18px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.12em;color:#75806f">JULY PROFIT</div>
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'Source Serif 4',serif;font-size:32px;font-weight:600">$5,180</div><div style="font-size:12px;color:#17795c;font-weight:600">↑ 8% vs June</div></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="flex:1;background:#f6f4ed;border-radius:10px;padding:8px 10px"><div style="font-size:9.5px;color:#75806f;letter-spacing:.08em;font-weight:600">INCOME</div><div style="font-family:'Source Serif 4',serif;font-size:15px;font-weight:600;margin-top:1px">$18,420</div></div>
+        <div style="flex:1;background:#f6f4ed;border-radius:10px;padding:8px 10px"><div style="font-size:9.5px;color:#75806f;letter-spacing:.08em;font-weight:600">PAYOUTS</div><div style="font-family:'Source Serif 4',serif;font-size:15px;font-weight:600;color:#b2401f;margin-top:1px">$1,250</div></div>
+        <div style="flex:1;background:#f6f4ed;border-radius:10px;padding:8px 10px"><div style="font-size:9.5px;color:#75806f;letter-spacing:.08em;font-weight:600">ITEMS</div><div style="font-family:'Source Serif 4',serif;font-size:15px;font-weight:600;margin-top:1px">142</div></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;height:44px;background:#17795c;color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13.5px;font-weight:600"><i data-lucide="plus" style="width:15px;height:15px"></i>Record sale</div>
+      <div style="flex:1;height:44px;background:#fff;border:1px solid #e5e1d3;color:#17795c;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13.5px;font-weight:600"><i data-lucide="package-plus" style="width:15px;height:15px"></i>New item</div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid #f3f1e8"><span style="width:7px;height:7px;border-radius:50%;background:#17795c;margin-right:8px"></span><span style="font-size:14.5px;font-weight:600">Recent sales</span><a style="margin-left:auto;font-size:12px;color:#17795c;font-weight:600;text-decoration:none">View all</a></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid #f3f1e8"><div style="width:36px;height:36px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="smartphone" style="width:16px;height:16px"></i></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Samsung Galaxy S23</div><div style="font-size:11px;color:#75806f">Hodan M. · EVC Plus</div></div><div style="text-align:right"><div style="font-family:'Source Serif 4',serif;font-size:15px;font-weight:600">$620</div><span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:#e6f1ea;color:#17795c">Paid</span></div></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid #f3f1e8"><div style="width:36px;height:36px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;flex:none"><i data-lucide="car" style="width:16px;height:16px"></i></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Toyota Vitz 2016</div><div style="font-size:11px;color:#75806f">Axmed A. · Bank Transfer</div></div><div style="text-align:right"><div style="font-family:'Source Serif 4',serif;font-size:15px;font-weight:600">$6,800</div><span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:#faf1de;color:#b07818">Pending</span></div></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:11px 16px"><div style="width:36px;height:36px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;flex:none"><i data-lucide="armchair" style="width:16px;height:16px"></i></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Office chairs set</div><div style="font-size:11px;color:#75806f">Yuusuf C. · Zaad</div></div><div style="text-align:right"><div style="font-family:'Source Serif 4',serif;font-size:15px;font-weight:600">$310</div><span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:#e6f1ea;color:#17795c">Paid</span></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:11px">
+      <div style="width:36px;height:36px;border-radius:12px;background:#fbeae4;color:#c2482f;display:grid;place-items:center;flex:none"><i data-lucide="clock" style="width:16px;height:16px"></i></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">Payouts due · <span style="font-family:'Source Serif 4',serif;color:#b2401f">$1,250.00</span></div><div style="font-size:11px;color:#75806f">Maryan $500 · Hodan $550 · Axmed $200</div></div>
+      <i data-lucide="chevron-right" style="width:16px;height:16px;color:#9aa294"></i>
+    </div>
+  </div>
+  <div style="background:#fbfaf5;border-top:1px solid #e9e6da;height:66px;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;flex:none;padding-bottom:6px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#17795c;font-size:10px;font-weight:600"><i data-lucide="layout-dashboard" style="width:19px;height:19px"></i>Home</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="package" style="width:19px;height:19px"></i>Items</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="shopping-cart" style="width:19px;height:19px"></i>Sales</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="users" style="width:19px;height:19px"></i>Customers</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="menu" style="width:19px;height:19px"></i>More</div>
+  </div>
+</div>
+</div>
+
+<div class="dv-card" style="width:390px" data-screen-label="4a mobile items list">
+<div style="width:390px;height:820px;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a;display:flex;flex-direction:column">
+  <div style="background:#fbfaf5;border-bottom:1px solid #e9e6da;padding:12px 16px 0;flex:none">
+    <div style="display:flex;align-items:center;gap:10px">
+      <i data-lucide="arrow-left" style="width:18px;height:18px;color:#3c4a42"></i>
+      <div style="font-family:'Source Serif 4',serif;font-size:19px;font-weight:600">Items</div><span style="font-size:11px;color:#75806f">153 total</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:5px;height:34px;padding:0 13px;background:#17795c;color:#fff;font-size:12.5px;font-weight:600;border-radius:9px"><i data-lucide="plus" style="width:13px;height:13px"></i>New</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:11px">
+      <div style="flex:1;display:flex;align-items:center;gap:8px;height:38px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;padding:0 12px;color:#9aa294;font-size:12.5px"><i data-lucide="search" style="width:14px;height:14px"></i>Search items…</div>
+      <div style="width:38px;height:38px;background:#fff;border:1px solid #e5e1d3;border-radius:10px;display:grid;place-items:center;color:#3c4a42;position:relative"><i data-lucide="sliders-horizontal" style="width:15px;height:15px"></i><span style="position:absolute;top:-4px;right:-4px;width:15px;height:15px;background:#17795c;color:#fff;font-size:9px;font-weight:700;border-radius:50%;display:grid;place-items:center">2</span></div>
+    </div>
+    <div style="display:flex;gap:6px;padding:10px 0 12px;overflow:hidden">
+      <span style="font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:99px;background:#17795c;color:#fff">All</span>
+      <span style="font-size:11.5px;padding:5px 13px;border-radius:99px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42">Active</span>
+      <span style="font-size:11.5px;padding:5px 13px;border-radius:99px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42">Reserved</span>
+      <span style="font-size:11.5px;padding:5px 13px;border-radius:99px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42">Sold</span>
+      <span style="font-size:11.5px;padding:5px 13px;border-radius:99px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42">Draft</span>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:12px 16px;display:flex;flex-direction:column;gap:9px">
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:14px;padding:13px 15px">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:34px;height:34px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="laptop" style="width:15px;height:15px"></i></span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">HP EliteBook 840 G8</div><div style="font-size:11px;color:#75806f">Electronics · Maryan Faarax</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#e6f1ea;color:#17795c">Active</span></div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:9px;padding-top:9px;border-top:1px solid #f3f1e8"><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$620</span><span style="font-size:11px;color:#75806f">asking $500</span><span style="margin-left:auto;font-family:'Source Serif 4',serif;font-size:13px;font-weight:600;color:#17795c">+$120</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:14px;padding:13px 15px">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:34px;height:34px;border-radius:50%;background:#e8edf6;color:#3d5aa8;display:grid;place-items:center;flex:none"><i data-lucide="car" style="width:15px;height:15px"></i></span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Toyota Vitz 2016</div><div style="font-size:11px;color:#75806f">Vehicles · Axmed Aweys</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#e8edf6;color:#3d5aa8">Reserved</span></div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:9px;padding-top:9px;border-top:1px solid #f3f1e8"><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$6,800</span><span style="font-size:11px;color:#75806f">asking $6,200</span><span style="margin-left:auto;font-family:'Source Serif 4',serif;font-size:13px;font-weight:600;color:#17795c">+$600</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:14px;padding:13px 15px">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:34px;height:34px;border-radius:50%;background:#faf1de;color:#b07818;display:grid;place-items:center;flex:none"><i data-lucide="armchair" style="width:15px;height:15px"></i></span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Office chairs set</div><div style="font-size:11px;color:#75806f">Furniture · Company stock</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#e6f1ea;color:#17795c">Active</span></div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:9px;padding-top:9px;border-top:1px solid #f3f1e8"><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$310</span><span style="font-size:11px;color:#75806f">cost $190</span><span style="margin-left:auto;font-family:'Source Serif 4',serif;font-size:13px;font-weight:600;color:#17795c">+$120</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:14px;padding:13px 15px">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:34px;height:34px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;flex:none"><i data-lucide="smartphone" style="width:15px;height:15px"></i></span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Samsung Galaxy S23</div><div style="font-size:11px;color:#75806f">Electronics · Hodan Maxamuud</div></div><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:#efede4;color:#75806f">Sold</span></div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:9px;padding-top:9px;border-top:1px solid #f3f1e8"><span style="font-family:'Source Serif 4',serif;font-size:16px;font-weight:600">$620</span><span style="font-size:11px;color:#75806f">asking $550</span><span style="margin-left:auto;font-family:'Source Serif 4',serif;font-size:13px;font-weight:600;color:#17795c">+$70</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:11.5px;color:#75806f;padding:4px 0">Showing 4 of 153 · <span style="color:#17795c;font-weight:600">Load more</span></div>
+  </div>
+  <div style="background:#fbfaf5;border-top:1px solid #e9e6da;height:66px;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;flex:none;padding-bottom:6px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="layout-dashboard" style="width:19px;height:19px"></i>Home</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#17795c;font-size:10px;font-weight:600"><i data-lucide="package" style="width:19px;height:19px"></i>Items</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="shopping-cart" style="width:19px;height:19px"></i>Sales</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="users" style="width:19px;height:19px"></i>Customers</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa294;font-size:10px"><i data-lucide="menu" style="width:19px;height:19px"></i>More</div>
+  </div>
+</div>
+</div>
+
+<div class="dv-card" style="width:390px" data-screen-label="4a mobile new item form">
+<div style="width:390px;height:820px;background:#f6f4ed;font-family:Jost,sans-serif;color:#22302a;display:flex;flex-direction:column">
+  <div style="background:#fbfaf5;border-bottom:1px solid #e9e6da;padding:14px 16px;display:flex;align-items:center;gap:10px;flex:none">
+    <i data-lucide="arrow-left" style="width:18px;height:18px;color:#3c4a42"></i>
+    <div style="font-family:'Source Serif 4',serif;font-size:19px;font-weight:600">New item</div>
+    <span style="margin-left:auto;font-size:11px;color:#75806f">Step 1 of 2</span>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px">
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Item information</div>
+      <div style="font-size:12.5px;font-weight:500;margin-bottom:5px">Title <span style="color:#c2482f">*</span></div>
+      <div style="height:42px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 12px;font-size:13px">HP EliteBook 840 G8</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div><div style="font-size:12.5px;font-weight:500;margin-bottom:5px">Category <span style="color:#c2482f">*</span></div><div style="height:42px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 12px;font-size:13px">Electronics<i data-lucide="chevron-down" style="width:14px;height:14px;color:#9aa294;margin-left:auto"></i></div></div>
+        <div><div style="font-size:12.5px;font-weight:500;margin-bottom:5px">Condition</div><div style="height:42px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 12px;font-size:13px">Used<i data-lucide="chevron-down" style="width:14px;height:14px;color:#9aa294;margin-left:auto"></i></div></div>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #eceadf;border-radius:16px;padding:16px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Ownership &amp; pricing</div>
+      <div style="display:flex;background:#f0eee3;border-radius:10px;padding:4px;font-size:12.5px;font-weight:500">
+        <span style="flex:1;text-align:center;padding:8px 0;border-radius:8px;background:#fff;color:#136a50;font-weight:600;box-shadow:0 1px 2px rgba(34,48,42,.1)">Consignment</span>
+        <span style="flex:1;text-align:center;padding:8px 0;color:#75806f">Company stock</span>
+      </div>
+      <div style="font-size:12.5px;font-weight:500;margin:12px 0 5px">Owner (customer) <span style="color:#c2482f">*</span></div>
+      <div style="height:42px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:13px"><span style="width:24px;height:24px;border-radius:50%;background:#e6f1ea;color:#17795c;display:grid;place-items:center;font-size:9px;font-weight:600">MF</span>Maryan Faarax<i data-lucide="chevron-down" style="width:14px;height:14px;color:#9aa294;margin-left:auto"></i></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div><div style="font-size:12.5px;font-weight:500;margin-bottom:5px">Asking (USD) <span style="color:#c2482f">*</span></div><div style="height:42px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 12px;font-size:13px"><span style="color:#9aa294;margin-right:6px">$</span>500.00</div></div>
+        <div><div style="font-size:12.5px;font-weight:500;margin-bottom:5px">Listed (USD) <span style="color:#c2482f">*</span></div><div style="height:42px;border:1px solid #e5e1d3;border-radius:10px;display:flex;align-items:center;padding:0 12px;font-size:13px"><span style="color:#9aa294;margin-right:6px">$</span>620.00</div></div>
+      </div>
+      <div style="margin-top:12px;background:#f3f7f4;border:1px dashed #bcd6c9;border-radius:10px;padding:10px 12px;display:flex;align-items:center;font-size:12.5px;color:#17795c;font-weight:600">Your markup<span style="margin-left:auto;font-family:'Source Serif 4',serif;font-size:15px">+$120.00</span></div>
+    </div>
+  </div>
+  <div style="background:#fbfaf5;border-top:1px solid #e9e6da;padding:12px 16px;display:flex;gap:10px;flex:none">
+    <div style="flex:1.4;height:46px;background:#17795c;color:#fff;border-radius:11px;display:grid;place-items:center;font-size:14px;font-weight:600">Create item</div>
+    <div style="flex:1;height:46px;background:#e6f1ea;color:#17795c;border-radius:11px;display:grid;place-items:center;font-size:13.5px;font-weight:600">Draft</div>
+    <div style="width:80px;height:46px;background:#fff;border:1px solid #e5e1d3;color:#3c4a42;border-radius:11px;display:grid;place-items:center;font-size:13.5px">Cancel</div>
+  </div>
+</div>
+</div>
+
+</div>
+</div>
+<p class="dv-next">Try next: "add the sale detail page" · "show the customers list" · "make the accent gold instead of green" · "export design tokens"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this._tries = 0;
+    this._icons = () => {
+      if (window.lucide && window.lucide.createIcons) {
+        window.lucide.createIcons();
+      } else if (this._tries++ < 40) {
+        setTimeout(this._icons, 250);
+      }
+    };
+    this._icons();
+  }
+  componentDidUpdate() {
+    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+  }
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

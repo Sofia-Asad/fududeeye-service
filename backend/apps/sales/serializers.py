@@ -6,13 +6,48 @@ User = get_user_model()
 
 
 class SaleSerializer(serializers.ModelSerializer):
+    item_title = serializers.CharField(source='item.title', read_only=True)
+    item_owner_type = serializers.CharField(source='item.owner_type', read_only=True)
+    item_owner_name = serializers.CharField(source='item.owner.full_name', read_only=True, allow_null=True)
+    item_listed_price = serializers.DecimalField(
+        source='item.listed_price',
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+    item_owner_asking_price = serializers.DecimalField(
+        source='item.owner_asking_price',
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+        allow_null=True,
+    )
+    item_cost_price = serializers.DecimalField(
+        source='item.cost_price',
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+        allow_null=True,
+    )
+    buyer_name = serializers.CharField(source='buyer.full_name', read_only=True)
+    handled_by_name = serializers.CharField(source='handled_by.username', read_only=True)
+    payout_handled_by_name = serializers.CharField(
+        source='payout_handled_by.username',
+        read_only=True,
+        allow_null=True,
+    )
+
     class Meta:
         model = Sale
         fields = [
-            'id', 'item', 'buyer', 'quantity_sold', 'sale_price',
-            'sale_date', 'payment_method', 'handled_by', 'notes',
+            'id',
+            'item', 'item_title', 'item_owner_type', 'item_owner_name',
+            'item_listed_price', 'item_owner_asking_price', 'item_cost_price',
+            'buyer', 'buyer_name', 'quantity_sold', 'sale_price',
+            'sale_date', 'payment_method', 'handled_by', 'handled_by_name', 'notes',
             'owner_payout_amount', 'company_profit',
-            'payout_status', 'payout_method', 'payout_date', 'payout_handled_by',
+            'payout_status', 'payout_method', 'payout_date',
+            'payout_handled_by', 'payout_handled_by_name',
             'created_at', 'updated_at', 'created_by', 'updated_by',
         ]
         read_only_fields = [

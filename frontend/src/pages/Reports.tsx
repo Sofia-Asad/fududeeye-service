@@ -1,134 +1,249 @@
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, BarChart3, CalendarDays, ReceiptText, TrendingUp, WalletCards } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+
+import {
+  getDashboardReport,
+  getDemandVsSupplyReport,
+  getExpenseReport,
+  getProfitReport,
+  getSalesReport,
+  getTopRequestedReport,
+} from '@/api/reports'
+import { useAuth } from '@/auth/AuthContext'
+import DataTable, { type Column } from '@/components/DataTable'
+import DirectoryCard from '@/components/DirectoryCard'
 import Layout from '@/components/Layout'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import MoneyDisplay from '@/components/MoneyDisplay'
+import PageHeader from '@/components/PageHeader'
+import PermissionGate from '@/components/PermissionGate'
+import SummaryCard from '@/components/SummaryCard'
+import { formatDate, todayISO } from '@/lib/sales'
+import type { DemandSupplyRow, TopRequestedRow } from '@/types/reports'
 
-const monthlyRevenue = [
-  { month: 'Jan', v: 34200 },
-  { month: 'Feb', v: 37800 },
-  { month: 'Mar', v: 31500 },
-  { month: 'Apr', v: 42100 },
-  { month: 'May', v: 45300 },
-  { month: 'Jun', v: 43025 },
-]
+const page = { padding: '30px 32px 40px' } as const
+const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
-const demandCats = [
-  { cat: 'Electronics', pct: 100 },
-  { cat: 'Furniture', pct: 75 },
-  { cat: 'Vehicles', pct: 46 },
-  { cat: 'Property', pct: 29 },
-  { cat: 'Appliances', pct: 21 },
-]
+function monthStartISO() {
+  const date = new Date()
+  date.setDate(1)
+  return date.toISOString().slice(0, 10)
+}
 
-const staffTable = [
-  { name: 'Hodan Maxamuud', sales: 38, revenue: '$15,420', profit: '$1,980' },
-  { name: 'Axmed Aweys', sales: 22, revenue: '$14,300', profit: '$1,560' },
-  { name: 'Yuusuf Cali', sales: 31, revenue: '$9,860', profit: '$1,240' },
-  { name: 'Maryan Faarax', sales: 9, revenue: '$3,445', profit: '$400' },
-]
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
+}
 
-const card = { background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', padding: '16px 18px' } as const
-const th = { textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' as const, color: 'var(--muted)' }
+function moneyTooltip(value: unknown, name: unknown) {
+  return [compactMoney.format(Number(value)), String(name)]
+}
 
 export default function Reports() {
+  const { user } = useAuth()
+  const [startDate, setStartDate] = useState(monthStartISO())
+  const [endDate, setEndDate] = useState(todayISO())
+  const enabled = !!user?.can_view_finance
+
+  const dashboard = useQuery({
+    queryKey: ['reports', 'dashboard'],
+    queryFn: getDashboardReport,
+    enabled,
+  })
+
+  const salesReport = useQuery({
+    queryKey: ['reports', 'sales', startDate, endDate],
+    queryFn: () => getSalesReport({ start: startDate || undefined, end: endDate || undefined }),
+    enabled,
+  })
+
+  const profitReport = useQuery({
+    queryKey: ['reports', 'profit', 'month', startDate, endDate],
+    queryFn: () => getProfitReport({ start: startDate || undefined, end: endDate || undefined, group_by: 'month' }),
+    enabled,
+  })
+
+  const expenseReport = useQuery({
+    queryKey: ['reports', 'expenses', startDate, endDate],
+    queryFn: () => getExpenseReport({ start: startDate || undefined, end: endDate || undefined }),
+    enabled,
+  })
+
+  const demandSupply = useQuery({
+    queryKey: ['reports', 'demand-vs-supply'],
+    queryFn: getDemandVsSupplyReport,
+    enabled,
+  })
+
+  const topRequested = useQuery({
+    queryKey: ['reports', 'top-requested'],
+    queryFn: getTopRequestedReport,
+    enabled,
+  })
+
+  const chartRows = useMemo(
+    () => (profitReport.data?.results ?? []).map(row => ({
+      period: row.period,
+      Sales: Number(row.sales),
+      Profit: Number(row.profit),
+    })),
+    [profitReport.data?.results],
+  )
+
+  const topRows = topRequested.data?.results ?? []
+  const maxDemandCount = Math.max(1, ...topRows.map(row => row.count))
+  const demandRows = (demandSupply.data?.results ?? []).filter(row => row.match_count > 0).slice(0, 5)
+  const periodLabel = startDate && endDate ? `${formatDate(startDate)} - ${formatDate(endDate)}` : 'All available data'
+
+  const demandColumns: Column<DemandSupplyRow>[] = [
+    {
+      key: 'demand',
+      header: 'Demand',
+      render: row => (
+        <Link to={`/demands/${row.demand_id}`} style={{ color: 'var(--text)', fontWeight: 800, textDecoration: 'none' }}>
+          {row.title}
+        </Link>
+      ),
+    },
+    { key: 'customer', header: 'Customer', render: row => row.customer },
+    { key: 'category', header: 'Category', render: row => row.category || '-' },
+    { key: 'matches', header: 'Matches', align: 'right', render: row => row.match_count },
+  ]
+
+  const requestedColumns: Column<TopRequestedRow>[] = [
+    { key: 'category', header: 'Category', render: row => row.category },
+    { key: 'count', header: 'Requests', align: 'right', render: row => row.count },
+  ]
+
+  const reportError = dashboard.error || salesReport.error || profitReport.error || expenseReport.error
+
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>Reports</h1>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>Date range:</span>
-              <div style={{ padding: '7px 14px', border: '1px solid var(--divider)', borderRadius: 6, background: 'var(--surface)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>1 – 28 Jun 2026</div>
-            </div>
-          </div>
+      <PermissionGate minRole="MANAGER" fallback={
+        <div style={page}>
+          <div className="card" style={{ padding: 22, color: 'var(--muted)', fontSize: 14 }}>Your role cannot view reports.</div>
+        </div>
+      }>
+        <div style={page}>
+          <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+            <PageHeader
+              eyebrow="Insights"
+              title="Reports"
+              subtitle={periodLabel}
+              actions={(
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <input className="control" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} style={{ padding: '0 12px', minWidth: 148 }} />
+                  <input className="control" type="date" value={endDate} onChange={event => setEndDate(event.target.value)} style={{ padding: '0 12px', minWidth: 148 }} />
+                </div>
+              )}
+            />
 
-          {/* KPI cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-            {[
-              { label: 'Revenue', value: '$43,025', color: 'var(--text)' },
-              { label: 'Profit', value: '$5,180', color: 'var(--success)' },
-              { label: 'Payouts settled', value: '$9,400', color: 'var(--text)' },
-              { label: 'Expenses', value: '$988', color: 'var(--warning)' },
-            ].map(k => (
-              <div key={k.label} style={card}>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{k.label}</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: k.color, fontVariantNumeric: 'tabular-nums' }}>{k.value}</div>
-              </div>
-            ))}
-          </div>
+            {reportError && (
+              <div className="error-banner" style={{ marginBottom: 16 }}>{errorMessage(reportError)}</div>
+            )}
 
-          {/* Charts row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, marginBottom: 20 }}>
-            {/* Revenue by month */}
-            <div style={{ ...card, padding: '18px 20px' }}>
-              <h2 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 600 }}>Revenue by month</h2>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={monthlyRevenue} margin={{ top: 0, right: 0, left: -15, bottom: 0 }}>
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#5a6b82' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#5a6b82' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Revenue']} contentStyle={{ fontSize: 12, borderRadius: 6, border: '1px solid #dce4ee' }} />
-                  <Bar dataKey="v" radius={[4, 4, 0, 0]}>
-                    {monthlyRevenue.map((_, i) => (
-                      <Cell key={i} fill={i === monthlyRevenue.length - 1 ? '#f9a800' : '#bcc8e8'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+              <SummaryCard label="Net sales" value={<MoneyDisplay value={salesReport.data?.net_sales ?? 0} />} caption={`${salesReport.data?.count ?? 0} sales`} icon={<WalletCards size={18} />} />
+              <SummaryCard label="Profit" value={<MoneyDisplay value={salesReport.data?.profit ?? 0} />} caption="Company markup" icon={<TrendingUp size={18} />} valueColor="var(--success)" />
+              <SummaryCard label="Expenses" value={<MoneyDisplay value={expenseReport.data?.total ?? 0} />} caption={`${expenseReport.data?.count ?? 0} rows`} icon={<ReceiptText size={18} />} tone="amber" />
+              <SummaryCard label="Pending payouts" value={<MoneyDisplay value={dashboard.data?.pending_payouts_total ?? 0} />} caption={`${dashboard.data?.counts.pending_payouts ?? 0} pending`} icon={<CalendarDays size={18} />} tone="red" valueColor="var(--money-owed)" />
             </div>
 
-            {/* Top categories by demand */}
-            <div style={{ ...card, padding: '18px 20px' }}>
-              <h2 style={{ margin: '0 0 18px', fontSize: 14, fontWeight: 600 }}>Top categories by demand</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {demandCats.map(cat => (
-                  <div key={cat.cat}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>{cat.cat}</span>
-                      <span style={{ fontSize: 12.5, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{cat.pct}%</span>
-                    </div>
-                    <div style={{ height: 7, borderRadius: 4, background: 'var(--surface-2)' }}>
-                      <div style={{ height: '100%', borderRadius: 4, background: 'var(--accent)', width: `${cat.pct}%`, transition: 'width .4s ease' }} />
-                    </div>
+            <div className="report-feature-grid" style={{ marginBottom: 16 }}>
+              <section className="card" style={{ padding: '18px 18px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 800 }}>
+                    <BarChart3 size={16} color="var(--primary-hover)" />
+                    Profit trend
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                  <Link to="/reports/profit" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--primary-hover)', fontSize: 12.5, fontWeight: 800, textDecoration: 'none' }}>
+                    Open <ArrowRight size={14} />
+                  </Link>
+                </div>
+                <div style={{ height: 240 }}>
+                  {chartRows.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartRows} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                        <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#75806F' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#75806F' }} axisLine={false} tickLine={false} tickFormatter={value => compactMoney.format(Number(value))} />
+                        <Tooltip formatter={moneyTooltip} contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #ECEADF' }} />
+                        <Bar dataKey="Sales" radius={[6, 6, 0, 0]} fill="#E8DDC4" />
+                        <Bar dataKey="Profit" radius={[6, 6, 0, 0]} fill="#17795C" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 14 }}>No profit data in this period.</div>
+                  )}
+                </div>
+              </section>
 
-          {/* Staff table */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-            <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--divider)', fontSize: 14, fontWeight: 600 }}>Sales by staff</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface-2)' }}>
-                  <th style={th}>Staff member</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Sales</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Revenue</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Profit contributed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffTable.map((s, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid var(--divider)' }}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#f9a800', color: '#1d3480', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                          {s.name.split(' ').map(n => n[0]).join('')}
+              <section className="card" style={{ padding: '18px' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 16 }}>Top requested</div>
+                {topRows.length > 0 ? (
+                  <div style={{ display: 'grid', gap: 13 }}>
+                    {topRows.slice(0, 6).map(row => (
+                      <div key={row.category_id ?? row.category}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700 }}>{row.category}</span>
+                          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{row.count}</span>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{s.name}</span>
+                        <div style={{ height: 7, borderRadius: 999, background: 'var(--neutral-bg)' }}>
+                          <div style={{ width: `${Math.max(8, (row.count / maxDemandCount) * 100)}%`, height: '100%', borderRadius: 999, background: 'var(--primary)' }} />
+                        </div>
                       </div>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{s.sales}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{s.revenue}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>{s.profit}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ minHeight: 160, display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 14 }}>No demand data yet.</div>
+                )}
+              </section>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 16 }}>
+              {[
+                { title: 'Sales report', detail: `${salesReport.data?.count ?? 0} sales`, to: '/reports/sales' },
+                { title: 'Profit report', detail: `${profitReport.data?.results.length ?? 0} periods`, to: '/reports/profit' },
+                { title: 'Expenses', detail: `${expenseReport.data?.count ?? 0} rows`, to: '/expenses' },
+                { title: 'Payouts', detail: `${dashboard.data?.counts.pending_payouts ?? 0} pending`, to: '/sales/payouts' },
+              ].map(link => (
+                <Link key={link.to} to={link.to} className="card" style={{ padding: '15px 16px', color: 'var(--text)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 800 }}>{link.title}</div>
+                    <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{link.detail}</div>
+                  </div>
+                  <ArrowRight size={16} color="var(--muted)" />
+                </Link>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+              <DirectoryCard
+                title={(
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <ReceiptText size={16} color="var(--primary-hover)" />
+                    Demand matches
+                  </span>
+                )}
+                count={`${demandRows.length} active matches`}
+              >
+                <DataTable columns={demandColumns} rows={demandRows} empty="No open demands have matches yet." variant="bare" />
+              </DirectoryCard>
+
+              <DirectoryCard title="Requested categories" count={`${topRows.length} categories`}>
+                <DataTable columns={requestedColumns} rows={topRows.slice(0, 6)} empty="No requested categories yet." variant="bare" />
+              </DirectoryCard>
+            </div>
           </div>
         </div>
-      </div>
+      </PermissionGate>
     </Layout>
   )
 }

@@ -1,81 +1,329 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ClipboardList, Filter, PackageCheck, Plus, Target, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { z } from 'zod'
+
+import { listCustomers } from '@/api/customers'
+import { listCategories } from '@/api/inventory'
+import { createDemand, listDemands } from '@/api/service'
+import DataTable, { type Column } from '@/components/DataTable'
+import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import Layout from '@/components/Layout'
+import MoneyDisplay from '@/components/MoneyDisplay'
+import PageHeader from '@/components/PageHeader'
+import PaginationFooter from '@/components/PaginationFooter'
+import StatusBadge from '@/components/StatusBadge'
+import SummaryCard from '@/components/SummaryCard'
+import { DEMAND_STATUS_LABELS, DEMAND_STATUSES, formatDate } from '@/lib/service'
+import type { Demand, DemandStatus } from '@/types/service'
 
-const demands = [
-  { customer: 'Faadumo Aweys', want: 'Looking for a 2-door fridge', cat: 'Appliances', budget: '$300.00', status: 'Open', age: '2 days', matches: 0 },
-  { customer: 'Ismaaciil Warsame', want: 'Used pickup truck, diesel', cat: 'Vehicles', budget: '$6,000.00', status: 'Open', age: '1 day', matches: 0 },
-  { customer: 'Naciima Daahir', want: 'Office chairs ×6', cat: 'Furniture', budget: '$180.00', status: 'Matched', age: '3 days', matches: 2 },
-  { customer: 'Cali Jaamac', want: 'Solar panels 300W', cat: 'Electronics', budget: '$800.00', status: 'Open', age: '5 days', matches: 0 },
-  { customer: 'Mukhtaar Siyaad', want: 'Laptop i5 / 8GB', cat: 'Electronics', budget: '$350.00', status: 'Matched', age: '4 days', matches: 3 },
-  { customer: 'Khadija Maxamed', want: 'Plot of land near Garsoor', cat: 'Property', budget: '$12,000.00', status: 'Fulfilled', age: '8 days', matches: 1 },
-  { customer: 'Maryan Cali', want: 'Dining set, 6-seat', cat: 'Furniture', budget: '$260.00', status: 'Open', age: '6 days', matches: 1 },
-  { customer: 'Saynab Cabdi', want: 'Washing machine', cat: 'Appliances', budget: '$280.00', status: 'Closed', age: '12 days', matches: 0 },
-]
+type StatusFilter = 'all' | DemandStatus
 
-const STATUS_STYLES: Record<string, { bg: string; fg: string }> = {
-  Open: { bg: '#fbf0e0', fg: '#b45309' },
-  Matched: { bg: '#e8ecf5', fg: '#1d3480' },
-  Fulfilled: { bg: '#e7f4ec', fg: '#1f7a4d' },
-  Closed: { bg: '#eef2f7', fg: '#6b7c93' },
+const moneyPattern = /^$|^\d+(\.\d{1,2})?$/
+const demandSchema = z.object({
+  customer: z.string().trim().min(1, 'Customer is required.'),
+  title: z.string().trim().min(1, 'Title is required.'),
+  description: z.string().trim(),
+  category: z.string().trim(),
+  target_price_min: z.string().trim().regex(moneyPattern, 'Use a valid amount.'),
+  target_price_max: z.string().trim().regex(moneyPattern, 'Use a valid amount.'),
+  notes: z.string().trim(),
+}).superRefine((value, ctx) => {
+  const min = value.target_price_min ? Number(value.target_price_min) : null
+  const max = value.target_price_max ? Number(value.target_price_max) : null
+  if (min !== null && max !== null && min > max) {
+    ctx.addIssue({ code: 'custom', path: ['target_price_max'], message: 'Maximum must be greater than minimum.' })
+  }
+})
+
+type DemandForm = z.infer<typeof demandSchema>
+
+const emptyForm: DemandForm = {
+  customer: '',
+  title: '',
+  description: '',
+  category: '',
+  target_price_min: '',
+  target_price_max: '',
+  notes: '',
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLES[status] ?? { bg: '#eef2f7', fg: '#6b7c93' }
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
+}
+
+function targetPrice(demand: Demand) {
+  if (demand.target_price_min && demand.target_price_max) {
+    return (
+      <>
+        <MoneyDisplay value={demand.target_price_min} /> - <MoneyDisplay value={demand.target_price_max} />
+      </>
+    )
+  }
+  if (demand.target_price_min) return <MoneyDisplay value={demand.target_price_min} />
+  if (demand.target_price_max) return <MoneyDisplay value={demand.target_price_max} />
+  return '-'
+}
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: s.bg, color: s.fg }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.fg }} />
-      {status}
-    </span>
+    <label className="field-label" data-error={!!error}>
+      <span className="field-title">{label}</span>
+      {children}
+      {error && <span className="field-error">{error}</span>}
+    </label>
   )
 }
 
-const th = { textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' as const, color: 'var(--muted)' }
-
 export default function Demands() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<StatusFilter>('all')
+  const [category, setCategory] = useState<number | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState<DemandForm>(emptyForm)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, status, category])
+
+  const demands = useQuery({
+    queryKey: ['demands', search, status, category, currentPage],
+    queryFn: () => listDemands({
+      search: search.trim() || undefined,
+      status: status === 'all' ? undefined : status,
+      category: category ?? undefined,
+      ordering: '-created_at',
+      page: currentPage,
+    }),
+  })
+
+  const categories = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => listCategories({ ordering: 'name' }),
+  })
+
+  const customers = useQuery({
+    queryKey: ['customers', 'demand-picker'],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    enabled: modalOpen,
+  })
+
+  const create = useMutation({
+    mutationFn: createDemand,
+    onSuccess: demand => {
+      setModalOpen(false)
+      setForm(emptyForm)
+      setErrors({})
+      void queryClient.invalidateQueries({ queryKey: ['demands'] })
+      navigate(`/demands/${demand.id}`)
+    },
+  })
+
+  const rows = demands.data?.results ?? []
+  const openOnPage = rows.filter(demand => demand.status === 'OPEN').length
+  const matchedOnPage = rows.filter(demand => demand.status === 'MATCHED').length
+  const fulfilledOnPage = rows.filter(demand => demand.status === 'FULFILLED').length
+
+  const columns: Column<Demand>[] = [
+    {
+      key: 'customer',
+      header: 'Customer',
+      render: demand => (
+        <Link to={`/customers/${demand.customer}`} style={{ display: 'flex', alignItems: 'center', gap: 11, color: 'var(--text)', textDecoration: 'none' }}>
+          <span style={{ width: 38, height: 38, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--primary-soft)', color: 'var(--primary-hover)' }}>
+            <ClipboardList size={16} />
+          </span>
+          <span>
+            <strong style={{ display: 'block', fontWeight: 700 }}>{demand.customer_name}</strong>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>{demand.category_name || 'Any category'}</span>
+          </span>
+        </Link>
+      ),
+    },
+    {
+      key: 'title',
+      header: 'What they want',
+      render: demand => (
+        <Link to={`/demands/${demand.id}`} style={{ color: 'var(--text)', fontWeight: 700, textDecoration: 'none' }}>
+          {demand.title}
+        </Link>
+      ),
+    },
+    { key: 'target', header: 'Target', align: 'right', render: demand => targetPrice(demand) },
+    { key: 'status', header: 'Status', render: demand => <StatusBadge status={demand.status} /> },
+    { key: 'matched_item', header: 'Matched item', render: demand => demand.matched_item_title || '-' },
+    { key: 'created_at', header: 'Created', render: demand => formatDate(demand.created_at) },
+  ]
+
+  function updateField<K extends keyof DemandForm>(field: K, value: DemandForm[K]) {
+    setForm(current => ({ ...current, [field]: value }))
+    setErrors(current => ({ ...current, [field]: '' }))
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const parsed = demandSchema.safeParse(form)
+    if (!parsed.success) {
+      const nextErrors: Record<string, string> = {}
+      parsed.error.issues.forEach(issue => {
+        const field = String(issue.path[0] ?? 'form')
+        if (!nextErrors[field]) nextErrors[field] = issue.message
+      })
+      setErrors(nextErrors)
+      return
+    }
+    const value = parsed.data
+    create.mutate({
+      customer: Number(value.customer),
+      title: value.title,
+      description: value.description,
+      category: value.category ? Number(value.category) : null,
+      target_price_min: value.target_price_min || null,
+      target_price_max: value.target_price_max || null,
+      notes: value.notes,
+    })
+  }
+
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>Demands</h1>
-              <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }}>12 open requests · 4 still unmatched</p>
-            </div>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 16px', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      <div className="app-page">
+        <PageHeader
+          eyebrow="Manage"
+          title="Demands"
+          subtitle="Customer requests waiting for inventory matches."
+          actions={(
+            <button type="button" onClick={() => setModalOpen(true)} className="primary-button">
+              <Plus size={16} />
               New demand
             </button>
-          </div>
+          )}
+        />
 
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface-2)' }}>
-                  <th style={th}>Customer</th>
-                  <th style={th}>What they want</th>
-                  <th style={th}>Category</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Target</th>
-                  <th style={th}>Status</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Age</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Matches</th>
-                </tr>
-              </thead>
-              <tbody>
-                {demands.map((d, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid var(--divider)', cursor: 'pointer' }}>
-                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600 }}>{d.customer}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.want}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 12.5, color: 'var(--muted)' }}>{d.cat}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{d.budget}</td>
-                    <td style={{ padding: '12px 16px' }}><StatusBadge status={d.status} /></td>
-                    <td style={{ padding: '12px 16px', fontSize: 12.5, textAlign: 'right', color: 'var(--muted)' }}>{d.age}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: d.matches > 0 ? 'var(--accent)' : 'var(--muted)', fontWeight: d.matches > 0 ? 600 : 400 }}>{d.matches}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+          <SummaryCard label="Total demands" value={demands.data?.count ?? rows.length} caption="Request records" icon={<ClipboardList size={18} />} />
+          <SummaryCard label="Open on page" value={openOnPage} caption="Needs matching" icon={<Target size={18} />} tone="amber" />
+          <SummaryCard label="Matched" value={matchedOnPage} caption="Item proposed" icon={<PackageCheck size={18} />} tone="blue" />
+          <SummaryCard label="Fulfilled" value={fulfilledOnPage} caption="Closed with supply" icon={<PackageCheck size={18} />} tone="primary" />
         </div>
+
+        <DirectoryCard
+          title="Demand directory"
+          count={demands.data ? `${demands.data.count} total records` : 'Loading records'}
+          toolbar={(
+            <DirectoryToolbar>
+              <SearchBox value={search} onChange={setSearch} placeholder="Search demands, customers, notes" />
+              <DirectorySelect value={status} onChange={value => setStatus(value as StatusFilter)} ariaLabel="Demand status">
+                <option value="all">All statuses</option>
+                {DEMAND_STATUSES.map(nextStatus => (
+                  <option key={nextStatus} value={nextStatus}>{DEMAND_STATUS_LABELS[nextStatus]}</option>
+                ))}
+              </DirectorySelect>
+              <DirectorySelect value={category ?? 'all'} onChange={value => setCategory(value === 'all' ? null : Number(value))} ariaLabel="Category">
+                <option value="all">All categories</option>
+                {(categories.data?.results ?? []).map(nextCategory => (
+                  <option key={nextCategory.id} value={nextCategory.id}>{nextCategory.name}</option>
+                ))}
+              </DirectorySelect>
+              <button type="button" className="primary-button" onClick={() => setCurrentPage(1)}>
+                <Filter size={16} />
+                Filter
+              </button>
+            </DirectoryToolbar>
+          )}
+          footer={demands.data && (
+            <PaginationFooter
+              page={currentPage}
+              total={demands.data.count}
+              hasPrevious={!!demands.data.previous}
+              hasNext={!!demands.data.next}
+              onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+              onNext={() => setCurrentPage(page => page + 1)}
+            />
+          )}
+        >
+          {demands.isLoading && <DirectorySkeleton />}
+          {demands.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(demands.error)}</div>}
+          {demands.data && <DataTable columns={columns} rows={rows} empty="No demands match the current filters." variant="bare" />}
+        </DirectoryCard>
       </div>
+
+      {modalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setModalOpen(false)}>
+          <form onSubmit={submit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
+              <div>
+                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New demand</h2>
+                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Create a customer request.</p>
+              </div>
+              <button type="button" onClick={() => setModalOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
+              <Field label="Customer" error={errors.customer}>
+                <select className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+                  <option value="">Choose customer</option>
+                  {(customers.data?.results ?? []).map(customer => (
+                    <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Title" error={errors.title}>
+                <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+
+              <Field label="Category">
+                <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+                  <option value="">Any category</option>
+                  {(categories.data?.results ?? []).map(nextCategory => (
+                    <option key={nextCategory.id} value={nextCategory.id}>{nextCategory.name}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <div className="modal-grid-2" style={{ gap: 14 }}>
+                <Field label="Target min" error={errors.target_price_min}>
+                  <input className="control" value={form.target_price_min} onChange={event => updateField('target_price_min', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+                </Field>
+                <Field label="Target max" error={errors.target_price_max}>
+                  <input className="control" value={form.target_price_max} onChange={event => updateField('target_price_max', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+                </Field>
+              </div>
+
+              <Field label="Description">
+                <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+
+              <Field label="Notes">
+                <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+
+              {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
+              <button type="button" onClick={() => setModalOpen(false)} className="secondary-button">Cancel</button>
+              <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
+                {create.isPending ? 'Saving...' : 'Create demand'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </Layout>
   )
 }

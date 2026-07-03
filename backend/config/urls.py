@@ -16,9 +16,14 @@ def api_root(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', api_root, name='api-root'),
+    path('api/v1/', include('apps.accounts.urls')),
     path('api/v1/customers/', include('apps.customers.urls')),
     path('api/v1/', include('apps.inventory.urls')),
     path('api/v1/', include('apps.sales.urls')),
+    path('api/v1/', include('apps.demands.urls')),
+    path('api/v1/', include('apps.complaints.urls')),
+    path('api/v1/', include('apps.finance.urls')),
+    path('api/v1/reports/', include('apps.reports.urls')),
 ]
 
 if settings.DEBUG:

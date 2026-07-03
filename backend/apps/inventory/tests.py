@@ -187,6 +187,9 @@ def test_create_valid_consignment_item(client, admin_user, category, consignment
     resp = client.post('/api/v1/items/', consignment_payload(category, consignment_owner))
     assert resp.status_code == 201
     assert resp.data['owner'] == consignment_owner.pk
+    assert resp.data['owner_name'] == consignment_owner.full_name
+    assert resp.data['category_name'] == category.name
+    assert resp.data['category_kind'] == category.kind
     assert resp.data['owner_asking_price'] == '200.00'
 
 
@@ -266,6 +269,22 @@ def test_filter_by_owner_type(client, admin_user, category, consignment_owner):
 
 
 @pytest.mark.django_db
+def test_filter_by_owner(client, admin_user, category, consignment_owner):
+    other_owner = Customer.objects.create(full_name='Sahra Ali', phone='+252 61 100 0002')
+    client.force_authenticate(user=admin_user)
+    client.post('/api/v1/items/', consignment_payload(category, consignment_owner))
+    client.post('/api/v1/items/', {
+        **consignment_payload(category, other_owner),
+        'title': 'Other Consignment Phone',
+    })
+
+    resp = client.get(f'/api/v1/items/?owner={consignment_owner.pk}')
+    assert resp.status_code == 200
+    owners = [item['owner'] for item in resp.data['results']]
+    assert owners == [consignment_owner.pk]
+
+
+@pytest.mark.django_db
 def test_filter_by_status(client, admin_user, category):
     client.force_authenticate(user=admin_user)
     resp_create = client.post('/api/v1/items/', company_payload(category))
@@ -289,10 +308,35 @@ def test_category_list(client, admin_user, category):
 
 
 @pytest.mark.django_db
+def test_sales_user_can_list_categories(client, sales_user, category):
+    client.force_authenticate(user=sales_user)
+    resp = client.get('/api/v1/categories/')
+    assert resp.status_code == 200
+    names = [c['name'] for c in resp.data['results']]
+    assert 'Electronics' in names
+
+
+@pytest.mark.django_db
 def test_category_create_by_manager(client, manager_user):
     client.force_authenticate(user=manager_user)
     resp = client.post('/api/v1/categories/', {'name': 'Vehicles', 'kind': 'VEHICLE'})
     assert resp.status_code == 201
+
+
+@pytest.mark.django_db
+def test_sales_user_cannot_create_category(client, sales_user):
+    client.force_authenticate(user=sales_user)
+    resp = client.post('/api/v1/categories/', {'name': 'Vehicles', 'kind': 'VEHICLE'})
+    assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_manager_cannot_delete_category(client, manager_user, category):
+    """MANAGER role may manage categories, but hard-delete is Admin-only."""
+    client.force_authenticate(user=manager_user)
+    resp = client.delete(f'/api/v1/categories/{category.pk}/')
+    assert resp.status_code == 403
+    assert Category.objects.filter(pk=category.pk).exists()
 
 
 @pytest.mark.django_db
@@ -309,3 +353,17 @@ def test_sales_user_cannot_delete_item(client, sales_user, category):
     client.force_authenticate(user=sales_user)
     resp = client.delete(f'/api/v1/items/{item_pk}/')
     assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_sales_user_cannot_create_published_item(client, sales_user, category):
+    client.force_authenticate(user=sales_user)
+    payload = {
+        **company_payload(category),
+        'status': 'ACTIVE',
+    }
+
+    resp = client.post('/api/v1/items/', payload)
+
+    assert resp.status_code == 400
+    assert 'status' in resp.data

@@ -8,7 +8,13 @@ from .serializers import SaleSerializer, MarkPaidSerializer, RefundSerializer
 
 
 class SaleViewSet(viewsets.ModelViewSet):
-    queryset = Sale.objects.select_related('item', 'buyer', 'handled_by').all()
+    queryset = Sale.objects.select_related(
+        'item',
+        'item__owner',
+        'buyer',
+        'handled_by',
+        'payout_handled_by',
+    ).all()
     serializer_class = SaleSerializer
     permission_classes = [IsStaffEditOwn, DenyDeleteUnlessAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

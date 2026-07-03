@@ -1,125 +1,204 @@
-import { useState } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { CheckCircle2, HandCoins, ReceiptText, UserRound, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+
+import { listPendingPayouts, markSalePaid } from '@/api/sales'
+import { useAuth } from '@/auth/AuthContext'
 import Layout from '@/components/Layout'
+import MoneyDisplay from '@/components/MoneyDisplay'
+import PageHeader from '@/components/PageHeader'
+import PermissionGate from '@/components/PermissionGate'
+import SummaryCard from '@/components/SummaryCard'
+import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS, formatDate, initials, todayISO } from '@/lib/sales'
+import type { PaymentMethod, PendingPayoutRow } from '@/types/sales'
 
-const ownerGroups = [
-  {
-    owner: 'Khadija Maxamed', initials: 'KM', total: '$11,800.00',
-    items: [{ name: 'Plot of land — Garsoor', amount: '$11,800.00', date: 'Jun 28', status: 'Pending' }],
-  },
-  {
-    owner: 'Cabdiraxmaan Nuur', initials: 'CN', total: '$4,500.00',
-    items: [{ name: 'Toyota Vitz 2008', amount: '$4,500.00', date: 'Jun 28', status: 'Pending' }],
-  },
-  {
-    owner: 'Maryan Cali', initials: 'MC', total: '$350.00',
-    items: [
-      { name: 'Wardrobe (4-door)', amount: '$190.00', date: 'Jun 22', status: 'Pending' },
-      { name: 'Bookshelf', amount: '$160.00', date: 'Jun 20', status: 'Pending' },
-    ],
-  },
-  {
-    owner: 'Saynab Cabdi', initials: 'SC', total: '$100.00',
-    items: [{ name: 'Office desk (140cm)', amount: '$100.00', date: 'Jun 18', status: 'Pending' }],
-  },
-]
+interface PayoutGroup {
+  ownerId: number | null
+  owner: string
+  total: number
+  rows: PendingPayoutRow[]
+}
 
-const PAYMENT_METHODS = [
-  { label: 'Cash', icon: '💵' },
-  { label: 'EVC Plus', icon: '📱' },
-  { label: 'Zaad', icon: '📲' },
-  { label: 'Bank Transfer', icon: '🏦' },
-]
+function errorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === 403) return 'You do not have permission to do that.'
+    if (status === 401) return 'Please sign in again.'
+    return status ? `Request failed (${status}).` : 'Request failed.'
+  }
+  return 'Request failed.'
+}
+
+function groupRows(rows: PendingPayoutRow[]) {
+  const groups = new Map<string, PayoutGroup>()
+  rows.forEach(row => {
+    const key = row.owner_id === null ? 'none' : String(row.owner_id)
+    const existing = groups.get(key) ?? {
+      ownerId: row.owner_id,
+      owner: row.owner || 'Unknown owner',
+      total: 0,
+      rows: [],
+    }
+    existing.total += Number(row.amount)
+    existing.rows.push(row)
+    groups.set(key, existing)
+  })
+  return [...groups.values()].sort((a, b) => a.owner.localeCompare(b.owner))
+}
 
 export default function PendingPayouts() {
-  const [modalOwner, setModalOwner] = useState<(typeof ownerGroups)[0] | null>(null)
-  const [selectedMethod, setSelectedMethod] = useState('Cash')
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const [modalGroup, setModalGroup] = useState<PayoutGroup | null>(null)
+  const [payoutMethod, setPayoutMethod] = useState<PaymentMethod>('CASH')
+  const [payoutDate, setPayoutDate] = useState(todayISO())
 
-  const total = '$16,750.00'
+  const payouts = useQuery({
+    queryKey: ['pending-payouts'],
+    queryFn: listPendingPayouts,
+    enabled: !!user?.can_view_finance,
+  })
+
+  const groups = useMemo(() => groupRows(payouts.data?.results ?? []), [payouts.data?.results])
+  const largestGroup = groups.reduce<PayoutGroup | null>((largest, group) => (!largest || group.total > largest.total ? group : largest), null)
+
+  const markGroupPaid = useMutation({
+    mutationFn: async (group: PayoutGroup) => {
+      if (!user) {
+        throw new Error('Missing user.')
+      }
+      await Promise.all(group.rows.map(row => markSalePaid(row.sale_id, {
+        payout_method: payoutMethod,
+        payout_date: payoutDate,
+        payout_handled_by: user.id,
+      })))
+    },
+    onSuccess: () => {
+      setModalGroup(null)
+      void queryClient.invalidateQueries({ queryKey: ['pending-payouts'] })
+      void queryClient.invalidateQueries({ queryKey: ['sales'] })
+    },
+  })
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (modalGroup) {
+      markGroupPaid.mutate(modalGroup)
+    }
+  }
 
   return (
     <Layout>
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ maxWidth: 780, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>Pending payouts</h1>
-              <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }}>4 owners owed · total {total}</p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Total owed</div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums' }}>{total}</div>
-            </div>
+      <PermissionGate minRole="MANAGER" fallback={
+        <div className="app-page">
+          <div className="card" style={{ padding: 22, color: 'var(--muted)' }}>Your role cannot view owner payouts.</div>
+        </div>
+      }>
+        <div className="app-page">
+          <PageHeader
+            eyebrow="Money"
+            title="Pending payouts"
+            subtitle="Owner payout queue grouped by consignment seller."
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <SummaryCard label="Total owed" value={<MoneyDisplay value={payouts.data?.total ?? 0} />} caption={`${payouts.data?.count ?? 0} sale payouts`} icon={<HandCoins size={18} />} tone="red" valueColor="var(--money-owed)" />
+            <SummaryCard label="Owners owed" value={groups.length} caption="Grouped recipients" icon={<UserRound size={18} />} />
+            <SummaryCard label="Largest owner" value={largestGroup ? largestGroup.owner : '-'} caption={largestGroup ? <MoneyDisplay value={largestGroup.total} /> : 'No open payouts'} icon={<HandCoins size={18} />} tone="amber" />
+            <SummaryCard label="Rows" value={payouts.data?.results.length ?? 0} caption="Pending sale rows" icon={<ReceiptText size={18} />} tone="blue" />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {ownerGroups.map(group => (
-              <div key={group.owner} style={{ background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 8, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: '1px solid var(--divider)' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#f9a800', color: '#1d3480', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{group.initials}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{group.owner}</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{group.items.length} item{group.items.length > 1 ? 's' : ''}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', marginRight: 14 }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums' }}>{group.total}</div>
-                  </div>
-                  <button
-                    onClick={() => setModalOwner(group)}
-                    style={{ height: 36, padding: '0 16px', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
-                  >
-                    Mark paid
-                  </button>
-                </div>
-                {group.items.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 20px 11px 72px', borderTop: i > 0 ? '1px solid var(--divider)' : undefined, background: 'var(--surface-2)' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>Sold {item.date}</div>
+          {payouts.isLoading && (
+            <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
+              <span className="skeleton-row" style={{ width: '60%' }} />
+              <span className="skeleton-row" style={{ width: '84%' }} />
+              <span className="skeleton-row" style={{ width: '48%' }} />
+            </section>
+          )}
+          {payouts.isError && (
+            <div className="error-banner">{errorMessage(payouts.error)}</div>
+          )}
+          {payouts.data && groups.length === 0 && (
+            <section className="card" style={{ padding: 42, color: 'var(--muted)', textAlign: 'center' }}>No pending payouts.</section>
+          )}
+          {groups.length > 0 && (
+            <div style={{ display: 'grid', gap: 14 }}>
+              {groups.map(group => (
+                <section key={group.ownerId ?? 'none'} className="card" style={{ overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderBottom: '1px solid var(--row-line)' }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--primary-soft)', color: 'var(--primary-hover)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+                      {initials(group.owner)}
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.amount}</div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* MODAL */}
-      {modalOwner && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,37,64,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} onClick={() => setModalOwner(null)}>
-          <div style={{ background: 'var(--surface)', borderRadius: 12, boxShadow: '0 20px 60px rgba(10,37,64,.25)', width: 440, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '22px 24px', borderBottom: '1px solid var(--divider)' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Mark payout as paid</div>
-              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{modalOwner.owner} · {modalOwner.total}</div>
-            </div>
-
-            <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 10 }}>Payment method</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {PAYMENT_METHODS.map(m => (
-                    <button key={m.label} onClick={() => setSelectedMethod(m.label)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: `2px solid ${selectedMethod === m.label ? 'var(--accent)' : 'var(--divider)'}`, borderRadius: 8, background: selectedMethod === m.label ? 'var(--accent-weak)' : 'var(--surface)', fontSize: 13.5, fontWeight: 600, color: selectedMethod === m.label ? 'var(--accent)' : 'var(--text)', fontFamily: 'inherit', cursor: 'pointer', transition: 'all .12s' }}>
-                      <span style={{ fontSize: 18 }}>{m.icon}</span>
-                      {m.label}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: 'var(--text)', fontSize: 15, fontWeight: 700 }}>{group.owner}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{group.rows.length} sale{group.rows.length === 1 ? '' : 's'} awaiting payout</div>
+                    </div>
+                    <div style={{ textAlign: 'right', marginRight: 4 }}>
+                      <div className="serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--money-owed)' }}><MoneyDisplay value={group.total} /></div>
+                    </div>
+                    <button type="button" onClick={() => setModalGroup(group)} className="primary-button">
+                      <CheckCircle2 size={16} />
+                      Mark paid
                     </button>
+                  </div>
+                  {group.rows.map((row, index) => (
+                    <div key={row.sale_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '12px 18px 12px 74px', borderTop: index > 0 ? '1px solid var(--row-line)' : undefined, background: 'var(--thead-bg)' }}>
+                      <div>
+                        <Link to={`/sales/${row.sale_id}`} style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', textDecoration: 'none' }}>{row.item}</Link>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Sold {formatDate(row.sale_date)}</div>
+                      </div>
+                      <div style={{ color: 'var(--money-owed)' }}><MoneyDisplay value={row.amount} /></div>
+                    </div>
                   ))}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Payment date</div>
-                <input type="date" defaultValue="2026-06-28" style={{ width: '100%', height: 42, padding: '0 12px', border: '1px solid var(--divider)', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', color: 'var(--text)', background: 'var(--surface)', outline: 'none' }} />
-              </div>
+                </section>
+              ))}
             </div>
-
-            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--divider)', display: 'flex', gap: 10 }}>
-              <button onClick={() => setModalOwner(null)} style={{ flex: 1, height: 42, border: '1px solid var(--divider)', borderRadius: 6, background: 'var(--surface)', color: 'var(--muted)', fontSize: 13.5, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => setModalOwner(null)} style={{ flex: 2, height: 42, border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Confirm payment</button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+
+        {modalGroup && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setModalGroup(null)}>
+            <form onSubmit={submit} className="card" style={{ width: 'min(440px, 100%)', overflow: 'hidden' }} onClick={event => event.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '22px 24px', borderBottom: '1px solid var(--row-line)' }}>
+                <div>
+                  <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>Mark payout paid</h2>
+                  <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }}>{modalGroup.owner} · <MoneyDisplay value={modalGroup.total} /></p>
+                </div>
+                <button type="button" onClick={() => setModalGroup(null)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div style={{ padding: '22px 24px', display: 'grid', gap: 16 }}>
+                <label className="field-label">
+                  <span className="field-title">Payment method</span>
+                  <select className="control" value={payoutMethod} onChange={event => setPayoutMethod(event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
+                    {PAYMENT_METHODS.map(method => (
+                      <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field-label">
+                  <span className="field-title">Payment date</span>
+                  <input className="control" type="date" value={payoutDate} onChange={event => setPayoutDate(event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                </label>
+                {markGroupPaid.isError && (
+                  <div className="error-banner">{errorMessage(markGroupPaid.error)}</div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 24px', borderTop: '1px solid var(--row-line)' }}>
+                <button type="button" onClick={() => setModalGroup(null)} className="secondary-button">Cancel</button>
+                <button type="submit" disabled={markGroupPaid.isPending} className="primary-button" style={{ opacity: markGroupPaid.isPending ? .7 : 1 }}>
+                  {markGroupPaid.isPending ? 'Saving...' : 'Confirm payment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </PermissionGate>
     </Layout>
   )
 }
