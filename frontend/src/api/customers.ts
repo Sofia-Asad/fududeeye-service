@@ -31,6 +31,11 @@ export async function createCustomer(payload: CustomerPayload) {
   return response.data
 }
 
+export async function updateCustomer(id: number, payload: CustomerPayload) {
+  const response = await api.patch<Customer>(`/customers/${id}/`, payload)
+  return response.data
+}
+
 export async function listCustomerItems(customerId: number) {
   const response = await api.get<PaginatedResponse<ItemSummary>>('/items/', {
     params: { owner: customerId, ordering: '-created_at' },

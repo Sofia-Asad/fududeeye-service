@@ -20,12 +20,15 @@ import { api } from '@/api/client'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
+import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { CHART_COLORS, chartAxisTick, chartLegendStyle, chartTooltipStyle, moneyShort } from '@/lib/chartTheme'
 
 interface PeriodSummary {
   sales_count: number
@@ -63,17 +66,6 @@ interface DashboardResponse {
   open_complaints: number
   open_demands: number
   recent_sales: RecentSale[]
-}
-
-function moneyShort(value: string | number) {
-  const numberValue = Number(value)
-  if (!Number.isFinite(numberValue)) return '$0'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-    notation: Math.abs(numberValue) >= 10000 ? 'compact' : 'standard',
-  }).format(numberValue)
 }
 
 const saleColumns: Column<RecentSale>[] = [
@@ -152,15 +144,7 @@ export default function Dashboard() {
             subtitle="Live brokerage performance, inventory movement, and owner payout pressure."
           />
 
-          {dashboard.isLoading && (
-            <div className="card" style={{ padding: 22 }}>
-              <div style={{ display: 'grid', gap: 14 }}>
-                <span className="skeleton-row" style={{ width: '34%' }} />
-                <span className="skeleton-row" style={{ width: '76%' }} />
-                <span className="skeleton-row" style={{ width: '58%' }} />
-              </div>
-            </div>
-          )}
+          {dashboard.isLoading && <SkeletonLines widths={['34%', '76%', '58%']} />}
 
           {dashboard.isError && (
             <div className="error-banner">
@@ -198,7 +182,7 @@ export default function Dashboard() {
                   value={dashboard.data.counts.active_items}
                   caption={`${dashboard.data.open_demands} open demands waiting`}
                   icon={<Package size={19} />}
-                  tone="blue"
+                  tone="gold"
                 />
               </div>
 
@@ -217,18 +201,18 @@ export default function Dashboard() {
                     >
                       <defs>
                         <linearGradient id="incomeFill" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor="#17795C" stopOpacity={0.07} />
-                          <stop offset="100%" stopColor="#17795C" stopOpacity={0} />
+                          <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.07} />
+                          <stop offset="100%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid stroke="#EFEDE4" vertical={false} />
-                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#75806F', fontSize: 12 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#75806F', fontSize: 12 }} tickFormatter={moneyShort} width={64} />
-                      <Tooltip formatter={value => moneyShort(Number(value ?? 0))} contentStyle={{ borderRadius: 12, borderColor: '#ECEADF', fontFamily: 'Jost' }} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12.5 }} />
-                      <Area type="monotone" dataKey="income" fill="url(#incomeFill)" stroke="none" />
-                      <Line type="monotone" dataKey="income" name="Income" stroke="#17795C" strokeWidth={3} dot={{ r: 4, fill: '#17795C' }} />
-                      <Line type="monotone" dataKey="profit" name="Profit" stroke="#E8A33D" strokeWidth={3} strokeDasharray="7 6" dot={{ r: 4, fill: '#E8A33D' }} />
+                      <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />
+                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={chartAxisTick} />
+                      <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={moneyShort} width={64} />
+                      <Tooltip formatter={value => moneyShort(Number(value ?? 0))} contentStyle={chartTooltipStyle} />
+                      <Legend iconType="circle" wrapperStyle={chartLegendStyle} />
+                      <Area type="monotone" dataKey="income" fill="url(#incomeFill)" stroke="none" legendType="none" />
+                      <Line type="monotone" dataKey="income" name="Income" stroke={CHART_COLORS.primary} strokeWidth={3} dot={{ r: 4, fill: CHART_COLORS.primary }} />
+                      <Line type="monotone" dataKey="profit" name="Profit" stroke={CHART_COLORS.gold} strokeWidth={3} strokeDasharray="7 6" dot={{ r: 4, fill: CHART_COLORS.gold }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </section>
@@ -248,10 +232,10 @@ export default function Dashboard() {
                         paddingAngle={4}
                         dataKey="value"
                       >
-                        <Cell fill="#17795C" />
-                        <Cell fill="#E8DDC4" />
+                        <Cell fill={CHART_COLORS.primary} />
+                        <Cell fill={CHART_COLORS.neutralFill} />
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 12, borderColor: '#ECEADF', fontFamily: 'Jost' }} />
+                      <Tooltip contentStyle={chartTooltipStyle} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div style={{ marginTop: -128, textAlign: 'center', pointerEvents: 'none' }}>
@@ -283,7 +267,7 @@ export default function Dashboard() {
                 </MiniCard>
 
                 <MiniCard title="Recent sales">
-                  <DataTable columns={saleColumns.slice(0, 3)} rows={dashboard.data.recent_sales.slice(0, 3)} empty="No recent sales yet." variant="bare" />
+                  <DataTable columns={saleColumns.slice(0, 3)} rows={dashboard.data.recent_sales.slice(0, 3)} empty={<EmptyState icon={<ShoppingCart size={18} />} title="No recent sales yet." />} variant="bare" />
                 </MiniCard>
 
                 <MiniCard title="Open demands">
@@ -302,7 +286,7 @@ export default function Dashboard() {
               </div>
 
               <DirectoryCard title="Recent sale directory" count={`${dashboard.data.recent_sales.length} latest records`}>
-                <DataTable columns={saleColumns} rows={dashboard.data.recent_sales} empty="No recent sales yet." variant="bare" />
+                <DataTable columns={saleColumns} rows={dashboard.data.recent_sales} empty={<EmptyState icon={<ShoppingCart size={18} />} title="No recent sales yet." />} variant="bare" />
               </DirectoryCard>
             </div>
           )}

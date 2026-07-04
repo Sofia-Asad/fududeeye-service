@@ -96,3 +96,35 @@ def test_sales_user_cannot_delete(client, sales_user):
     client.force_authenticate(user=sales_user)
     resp = client.delete(f'/api/v1/customers/{c.pk}/')
     assert resp.status_code == 403
+
+
+# --- business rule: edit permissions ---
+
+@pytest.mark.django_db
+def test_admin_can_edit_any_customer(client, admin_user):
+    c = Customer.objects.create(full_name='Original Name', phone='001')
+    client.force_authenticate(user=admin_user)
+    resp = client.patch(f'/api/v1/customers/{c.pk}/', {'full_name': 'Updated Name'})
+    assert resp.status_code == 200
+    assert resp.data['full_name'] == 'Updated Name'
+
+
+@pytest.mark.django_db
+def test_sales_user_can_edit_own_customer(client, sales_user):
+    c = Customer.objects.create(full_name='Owned Customer', phone='555', created_by=sales_user)
+    client.force_authenticate(user=sales_user)
+
+    resp = client.patch(f'/api/v1/customers/{c.pk}/', {'full_name': 'Renamed Owned Customer'})
+    assert resp.status_code == 200
+    assert resp.data['full_name'] == 'Renamed Owned Customer'
+
+
+@pytest.mark.django_db
+def test_sales_user_cannot_edit_others_customer(client, admin_user, sales_user):
+    client.force_authenticate(user=admin_user)
+    create_resp = client.post('/api/v1/customers/', {'full_name': 'Admin Created', 'phone': '777'})
+    customer_id = create_resp.data['id']
+
+    client.force_authenticate(user=sales_user)
+    resp = client.patch(f'/api/v1/customers/{customer_id}/', {'full_name': 'Hijacked'})
+    assert resp.status_code == 403

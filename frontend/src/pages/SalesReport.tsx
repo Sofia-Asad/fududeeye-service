@@ -2,18 +2,19 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Banknote, Filter, RotateCcw, ShoppingCart, TrendingUp } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { listCategories } from '@/api/inventory'
 import { getSalesReport } from '@/api/reports'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import { formatDate, PAYMENT_METHOD_LABELS, PAYMENT_METHODS, todayISO } from '@/lib/sales'
 import type { ReportSaleRow } from '@/types/reports'
 import type { PaymentMethod } from '@/types/sales'
@@ -27,16 +28,6 @@ function monthStartISO() {
   const date = new Date()
   date.setDate(1)
   return date.toISOString().slice(0, 10)
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
 }
 
 export default function SalesReport() {
@@ -144,7 +135,7 @@ export default function SalesReport() {
             >
               {report.isLoading && <DirectorySkeleton />}
               {report.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(report.error)}</div>}
-              {report.data && <DataTable columns={columns} rows={report.data.results} empty="No sales match the current filters." variant="bare" />}
+              {report.data && <DataTable columns={columns} rows={report.data.results} empty={<EmptyState icon={<ShoppingCart size={18} />} title="No sales found." subtitle="No sales match the current filters." />} variant="bare" />}
             </DirectoryCard>
           </div>
         </div>

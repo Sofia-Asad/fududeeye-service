@@ -2,11 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Filter, Package, Plus, Tags, Warehouse } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { createCategory, listCategories, listItems } from '@/api/inventory'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
@@ -14,6 +14,7 @@ import PaginationFooter from '@/components/PaginationFooter'
 import PermissionGate from '@/components/PermissionGate'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import {
   CATEGORY_KIND_LABELS,
   ITEM_STATUSES,
@@ -21,20 +22,11 @@ import {
   STATUS_LABELS,
   formatDate,
 } from '@/lib/inventory'
+import { notifyError, notifySuccess } from '@/lib/toast'
 import type { CategoryKind, Item, ItemStatus, OwnerType } from '@/types/inventory'
 
 type StatusFilter = 'all' | ItemStatus
 type OwnerFilter = 'all' | OwnerType
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
 
 function itemIcon(title: string) {
   return title.trim().slice(0, 1).toUpperCase() || 'I'
@@ -77,7 +69,9 @@ export default function Items() {
       setCategoryName('')
       setCategoryKind('GENERIC')
       void queryClient.invalidateQueries({ queryKey: ['categories'] })
+      notifySuccess('Category saved')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   const rows = items.data?.results ?? []
@@ -210,7 +204,21 @@ export default function Items() {
           {categories.isError && <div className="error-banner" style={{ margin: '0 18px 12px' }}>{errorMessage(categories.error)}</div>}
           {items.isLoading && <DirectorySkeleton />}
           {items.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(items.error)}</div>}
-          {items.data && <DataTable columns={columns} rows={rows} empty="No items match the current filters." variant="bare" />}
+          {items.data && (
+            <DataTable
+              columns={columns}
+              rows={rows}
+              variant="bare"
+              empty={(
+                <EmptyState
+                  icon={<Package size={18} />}
+                  title="No items found."
+                  subtitle="Add your first inventory item or adjust the current filters."
+                  action={<Link to="/items/new" className="primary-button"><Plus size={16} />Add item</Link>}
+                />
+              )}
+            />
+          )}
         </DirectoryCard>
 
         <PermissionGate minRole="MANAGER">

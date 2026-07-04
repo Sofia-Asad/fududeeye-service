@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Phone, ShoppingCart } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
+import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Pencil, Phone, ShoppingCart, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   getCustomer,
@@ -10,41 +9,41 @@ import {
   listCustomerDemands,
   listCustomerItems,
   listCustomerPurchases,
+  updateCustomer,
 } from '@/api/customers'
+import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
+import EmptyState from '@/components/EmptyState'
+import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
+import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import type { CustomerFormValues } from '@/lib/customerSchema'
+import { customerSchema } from '@/lib/customerSchema'
+import { errorMessage, formErrorMessage } from '@/lib/errors'
+import { formatDate, initials } from '@/lib/sales'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { ComplaintSummary, Customer, DemandSummary, ItemSummary, SaleSummary } from '@/types/customer'
+
+function formFromCustomer(customer: Customer): CustomerFormValues {
+  return {
+    full_name: customer.full_name,
+    phone: customer.phone,
+    alternate_phone: customer.alternate_phone,
+    email: customer.email,
+    address: customer.address,
+    notes: customer.notes,
+    is_active: customer.is_active,
+  }
+}
 
 const TABS = ['Profile', 'Items owned', 'Purchases', 'Demands', 'Complaints'] as const
 type Tab = typeof TABS[number]
-
-function initials(customer?: Customer) {
-  return (customer?.full_name ?? '?')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(value))
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
 
 function targetRange(demand: DemandSummary) {
   if (demand.target_price_min && demand.target_price_max) {
@@ -72,7 +71,16 @@ export default function CustomerDetail() {
   const { id } = useParams()
   const customerId = Number(id)
   const validCustomerId = Number.isFinite(customerId) && customerId > 0
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('Profile')
+  const [editOpen, setEditOpen] = useState(false)
+  const [form, setForm] = useState<CustomerFormValues | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useFocusFirstError(errors, formRef)
+  useEscapeToClose(editOpen, () => setEditOpen(false))
 
   const customer = useQuery({
     queryKey: ['customer', customerId],
@@ -99,6 +107,42 @@ export default function CustomerDetail() {
     queryFn: () => listCustomerComplaints(customerId),
     enabled: validCustomerId,
   })
+
+  const save = useMutation({
+    mutationFn: (payload: CustomerFormValues) => updateCustomer(customerId, payload),
+    onSuccess: updated => {
+      queryClient.setQueryData(['customer', customerId], updated)
+      void queryClient.invalidateQueries({ queryKey: ['customers'] })
+      setEditOpen(false)
+      notifySuccess('Customer updated')
+    },
+    onError: error => notifyError(formErrorMessage(error, 'Customer could not be saved.')),
+  })
+
+  function openEdit() {
+    if (!customer.data) return
+    setForm(formFromCustomer(customer.data))
+    setErrors({})
+    setEditOpen(true)
+  }
+
+  function updateField<K extends keyof CustomerFormValues>(field: K, value: CustomerFormValues[K]) {
+    setForm(current => current && { ...current, [field]: value })
+    setErrors(current => ({ ...current, [field]: '' }))
+  }
+
+  function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!form) return
+    const parsed = customerSchema.safeParse(form)
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error))
+      return
+    }
+    save.mutate(parsed.data)
+  }
+
+  const canEdit = Boolean(user && (user.role === 'ADMIN' || user.role === 'MANAGER' || customer.data?.created_by === user.id))
 
   const itemRows = items.data?.results ?? []
   const purchaseRows = purchases.data?.results ?? []
@@ -143,10 +187,7 @@ export default function CustomerDetail() {
     return (
       <Layout>
         <div className="app-page">
-          <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
-            <span className="skeleton-row" style={{ width: '38%' }} />
-            <span className="skeleton-row" style={{ width: '72%' }} />
-          </section>
+          <SkeletonLines widths={['38%', '72%']} />
         </div>
       </Layout>
     )
@@ -182,6 +223,12 @@ export default function CustomerDetail() {
                 <StatusBadge status={current.is_active ? 'ACTIVE' : 'INACTIVE'} />
                 {current.is_buyer && <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)' }}>Buyer</span>}
                 {current.is_seller && <span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--warning-bg)', color: 'var(--warning)' }}>Seller</span>}
+                {canEdit && (
+                  <button type="button" onClick={openEdit} className="secondary-button">
+                    <Pencil size={16} />
+                    Edit
+                  </button>
+                )}
               </>
             )}
           />
@@ -196,7 +243,7 @@ export default function CustomerDetail() {
           <section className="card" style={{ overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', borderBottom: '1px solid var(--row-line)' }}>
               <div style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--primary-soft)', color: 'var(--primary-hover)', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
-                {initials(current)}
+                {initials(current.full_name)}
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{current.full_name}</div>
@@ -244,7 +291,8 @@ export default function CustomerDetail() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Owned item records</h2>
                   <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{itemRows.length} rows</div>
                 </div>
-                <DataTable variant="bare" columns={itemColumns} rows={itemRows} empty={items.isLoading ? 'Loading items...' : 'No owned items yet.'} />
+                {items.isLoading && <SkeletonLines widths={['50%', '70%']} />}
+                {!items.isLoading && <DataTable variant="bare" columns={itemColumns} rows={itemRows} empty={<EmptyState icon={<Package size={18} />} title="No owned items yet." />} />}
               </>
             )}
             {tab === 'Purchases' && (
@@ -253,7 +301,8 @@ export default function CustomerDetail() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Purchase records</h2>
                   <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{purchaseRows.length} rows</div>
                 </div>
-                <DataTable variant="bare" columns={purchaseColumns} rows={purchaseRows} empty={purchases.isLoading ? 'Loading purchases...' : 'No purchases yet.'} />
+                {purchases.isLoading && <SkeletonLines widths={['50%', '70%']} />}
+                {!purchases.isLoading && <DataTable variant="bare" columns={purchaseColumns} rows={purchaseRows} empty={<EmptyState icon={<ShoppingCart size={18} />} title="No purchases yet." />} />}
               </>
             )}
             {tab === 'Demands' && (
@@ -262,7 +311,8 @@ export default function CustomerDetail() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Demand records</h2>
                   <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{demandRows.length} rows</div>
                 </div>
-                <DataTable variant="bare" columns={demandColumns} rows={demandRows} empty={demands.isLoading ? 'Loading demands...' : 'No demands yet.'} />
+                {demands.isLoading && <SkeletonLines widths={['50%', '70%']} />}
+                {!demands.isLoading && <DataTable variant="bare" columns={demandColumns} rows={demandRows} empty={<EmptyState icon={<ClipboardList size={18} />} title="No matching demands." />} />}
               </>
             )}
             {tab === 'Complaints' && (
@@ -271,12 +321,62 @@ export default function CustomerDetail() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Complaint records</h2>
                   <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 12.5 }}>{complaintRows.length} rows</div>
                 </div>
-                <DataTable variant="bare" columns={complaintColumns} rows={complaintRows} empty={complaints.isLoading ? 'Loading complaints...' : 'No complaints yet.'} />
+                {complaints.isLoading && <SkeletonLines widths={['50%', '70%']} />}
+                {!complaints.isLoading && <DataTable variant="bare" columns={complaintColumns} rows={complaintRows} empty={<EmptyState icon={<MessageSquareWarning size={18} />} title="No complaints found." />} />}
               </>
             )}
           </section>
         </div>
       </div>
+
+      {editOpen && form && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setEditOpen(false)}>
+          <form ref={formRef} onSubmit={submitEdit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
+              <div>
+                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>Edit customer</h2>
+                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Update contact profile details.</p>
+              </div>
+              <button type="button" onClick={() => setEditOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
+              <Field label="Full name" error={errors.full_name} name="full_name">
+                <input autoFocus className="control" value={form.full_name} onChange={event => updateField('full_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <div className="modal-grid-2" style={{ gap: 14 }}>
+                <Field label="Phone" error={errors.phone} name="phone">
+                  <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                </Field>
+                <Field label="Alternate phone" error={errors.alternate_phone} name="alternate_phone">
+                  <input className="control" value={form.alternate_phone} onChange={event => updateField('alternate_phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                </Field>
+              </div>
+              <Field label="Email" error={errors.email} name="email">
+                <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Address" error={errors.address} name="address">
+                <textarea className="control" value={form.address} onChange={event => updateField('address', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+              <Field label="Notes" error={errors.notes} name="notes">
+                <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+              </Field>
+              <label className="checkbox-row">
+                <input checked={form.is_active} onChange={event => updateField('is_active', event.target.checked)} type="checkbox" />
+                Active customer
+              </label>
+              {save.isError && <div className="error-banner">{formErrorMessage(save.error, 'Customer could not be saved.')}</div>}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
+              <button type="button" onClick={() => setEditOpen(false)} className="secondary-button">Cancel</button>
+              <button type="submit" disabled={save.isPending} className="primary-button" style={{ opacity: save.isPending ? .7 : 1 }}>
+                {save.isPending ? 'Saving...' : 'Save customer'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </Layout>
   )
 }

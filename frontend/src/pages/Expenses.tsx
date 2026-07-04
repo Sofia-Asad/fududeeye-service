@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CreditCard, Filter, FolderPlus, Plus, ReceiptText, RotateCcw, Tags, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 import { z } from 'zod'
 
 import { createExpense, createExpenseCategory, listExpenseCategories, listExpenses } from '@/api/finance'
@@ -9,13 +9,19 @@ import { getExpenseReport } from '@/api/reports'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
+import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import PermissionGate from '@/components/PermissionGate'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import { formatDate, PAYMENT_METHOD_LABELS, PAYMENT_METHODS, todayISO } from '@/lib/sales'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Expense } from '@/types/finance'
 import type { PaymentMethod } from '@/types/sales'
 
@@ -62,38 +68,11 @@ function monthStartISO() {
   return date.toISOString().slice(0, 10)
 }
 
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
-function fieldErrors(error: z.ZodError) {
-  const nextErrors: Record<string, string> = {}
-  error.issues.forEach(issue => {
-    const field = String(issue.path[0] ?? 'form')
-    if (!nextErrors[field]) nextErrors[field] = issue.message
-  })
-  return nextErrors
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <label className="field-label" data-error={!!error}>
-      <span className="field-title">{label}</span>
-      {children}
-      {error && <span className="field-error">{error}</span>}
-    </label>
-  )
-}
-
 export default function Expenses() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const expenseFormRef = useRef<HTMLFormElement>(null)
+  const categoryFormRef = useRef<HTMLFormElement>(null)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<number | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentFilter>('all')
@@ -110,6 +89,11 @@ export default function Expenses() {
   useEffect(() => {
     setCurrentPage(1)
   }, [search, category, paymentMethod, startDate, endDate])
+
+  useFocusFirstError(expenseErrors, expenseFormRef)
+  useFocusFirstError(categoryErrors, categoryFormRef)
+  useEscapeToClose(expenseModalOpen, () => setExpenseModalOpen(false))
+  useEscapeToClose(categoryModalOpen, () => setCategoryModalOpen(false))
 
   const enabled = !!user?.can_view_finance
 
@@ -151,7 +135,9 @@ export default function Expenses() {
       setExpenseErrors({})
       void queryClient.invalidateQueries({ queryKey: ['expenses'] })
       void queryClient.invalidateQueries({ queryKey: ['reports'] })
+      notifySuccess('Expense saved')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   const createCategory = useMutation({
@@ -162,7 +148,9 @@ export default function Expenses() {
       setCategoryErrors({})
       setExpenseForm(current => ({ ...current, category: String(categoryRow.id) }))
       void queryClient.invalidateQueries({ queryKey: ['expense-categories'] })
+      notifySuccess('Category saved')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   const rows = expenses.data?.results ?? []
@@ -180,7 +168,7 @@ export default function Expenses() {
       key: 'expense_date',
       header: 'Expense',
       render: expense => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <Link to={`/expenses/${expense.id}`} style={{ display: 'flex', alignItems: 'center', gap: 11, color: 'inherit', textDecoration: 'none' }}>
           <span style={{ width: 38, height: 38, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--warning-bg)', color: 'var(--warning)' }}>
             <ReceiptText size={16} />
           </span>
@@ -188,7 +176,7 @@ export default function Expenses() {
             <strong style={{ display: 'block', color: 'var(--text)', fontWeight: 700 }}>{expense.description}</strong>
             <span style={{ color: 'var(--muted)', fontSize: 12 }}>{formatDate(expense.expense_date)}</span>
           </span>
-        </div>
+        </Link>
       ),
     },
     {
@@ -330,14 +318,28 @@ export default function Expenses() {
           >
             {expenses.isLoading && <DirectorySkeleton />}
             {expenses.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(expenses.error)}</div>}
-            {expenses.data && <DataTable columns={columns} rows={rows} empty="No expenses match the current filters." variant="bare" />}
+            {expenses.data && (
+              <DataTable
+                columns={columns}
+                rows={rows}
+                variant="bare"
+                empty={(
+                  <EmptyState
+                    icon={<ReceiptText size={18} />}
+                    title="No expenses found."
+                    subtitle="Record your first operating cost to start tracking spend."
+                    action={<button type="button" onClick={() => setExpenseModalOpen(true)} className="primary-button"><Plus size={16} />New expense</button>}
+                  />
+                )}
+              />
+            )}
           </DirectoryCard>
         </div>
       </PermissionGate>
 
       {expenseModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setExpenseModalOpen(false)}>
-          <form onSubmit={submitExpense} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
+          <form ref={expenseFormRef} onSubmit={submitExpense} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
               <div>
                 <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New expense</h2>
@@ -348,8 +350,8 @@ export default function Expenses() {
               </button>
             </div>
             <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Category" error={expenseErrors.category}>
-                <select className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+              <Field label="Category" error={expenseErrors.category} name="category">
+                <select autoFocus className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                   <option value="">Choose category</option>
                   {(categories.data?.results ?? []).map(row => (
                     <option key={row.id} value={row.id}>{row.name}</option>
@@ -357,13 +359,13 @@ export default function Expenses() {
                 </select>
               </Field>
               <div className="modal-grid-3" style={{ gap: 14 }}>
-                <Field label="Amount" error={expenseErrors.amount}>
+                <Field label="Amount" error={expenseErrors.amount} name="amount">
                   <input className="control" value={expenseForm.amount} onChange={event => updateExpenseField('amount', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
                 </Field>
-                <Field label="Date" error={expenseErrors.expense_date}>
+                <Field label="Date" error={expenseErrors.expense_date} name="expense_date">
                   <input className="control" type="date" value={expenseForm.expense_date} onChange={event => updateExpenseField('expense_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </Field>
-                <Field label="Payment">
+                <Field label="Payment" name="payment_method">
                   <select className="control" value={expenseForm.payment_method} onChange={event => updateExpenseField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
                     {PAYMENT_METHODS.map(method => (
                       <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
@@ -371,10 +373,10 @@ export default function Expenses() {
                   </select>
                 </Field>
               </div>
-              <Field label="Description" error={expenseErrors.description}>
+              <Field label="Description" error={expenseErrors.description} name="description">
                 <textarea className="control" value={expenseForm.description} onChange={event => updateExpenseField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </Field>
-              <Field label="Notes">
+              <Field label="Notes" name="notes">
                 <textarea className="control" value={expenseForm.notes} onChange={event => updateExpenseField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </Field>
               {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
@@ -391,7 +393,7 @@ export default function Expenses() {
 
       {categoryModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setCategoryModalOpen(false)}>
-          <form onSubmit={submitCategory} className="card" style={{ width: 'min(440px, 100%)', overflow: 'hidden' }} onClick={event => event.stopPropagation()}>
+          <form ref={categoryFormRef} onSubmit={submitCategory} className="card" style={{ width: 'min(440px, 100%)', overflow: 'hidden' }} onClick={event => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
               <div>
                 <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New category</h2>
@@ -402,10 +404,10 @@ export default function Expenses() {
               </button>
             </div>
             <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Name" error={categoryErrors.name}>
-                <input className="control" value={categoryForm.name} onChange={event => updateCategoryField('name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              <Field label="Name" error={categoryErrors.name} name="name">
+                <input autoFocus className="control" value={categoryForm.name} onChange={event => updateCategoryField('name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
               </Field>
-              <Field label="Description">
+              <Field label="Description" name="description">
                 <textarea className="control" value={categoryForm.description} onChange={event => updateCategoryField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </Field>
               {createCategory.isError && <div className="error-banner">{errorMessage(createCategory.error)}</div>}

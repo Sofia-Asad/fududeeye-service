@@ -13,12 +13,12 @@ const config: Config = {
       },
       colors: {
         primary: {
-          DEFAULT: '#17795C',
-          hover: '#136A50',
-          soft: '#E6F1EA',
-          deep: '#1C4A3C',
+          DEFAULT: '#1A2057',
+          hover: '#12163F',
+          soft: '#E7E8F2',
+          deep: '#10143A',
         },
-        accent: '#E8A33D',
+        accent: '#F2B705',
         canvas: '#F6F4ED',
         sidebar: '#FBFAF5',
         surface: '#FFFFFF',
@@ -60,11 +60,11 @@ const config: Config = {
           soft: '#EFEDE4',
         },
         brand: {
-          navy: '#1C4A3C',
-          gold: '#E8A33D',
-          'navy-weak': '#E8EDF6',
-          'gold-weak': '#FAF1DE',
-          'gold-dark': '#B07818',
+          navy: '#1A2057',
+          gold: '#F2B705',
+          'navy-weak': '#E7E8F2',
+          'gold-weak': '#FDF3D6',
+          'gold-dark': '#C99A04',
         },
       },
       borderRadius: {
@@ -73,7 +73,7 @@ const config: Config = {
       },
       boxShadow: {
         card: '0 1px 2px rgba(34,48,42,.03)',
-        primary: '0 1px 2px rgba(23,121,92,.3)',
+        primary: '0 1px 2px rgba(26,32,87,.3)',
       },
     },
   },

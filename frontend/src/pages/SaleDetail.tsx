@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Banknote, CheckCircle2, CreditCard, HandCoins, ShoppingCart, UserRound } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { getSale, markSalePaid } from '@/api/sales'
 import { useAuth } from '@/auth/AuthContext'
@@ -12,20 +11,13 @@ import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
+import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS, formatDate, todayISO } from '@/lib/sales'
+import { notifyError, notifySuccess } from '@/lib/toast'
 import type { PaymentMethod } from '@/types/sales'
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
 
 export default function SaleDetail() {
   const { id } = useParams()
@@ -52,7 +44,9 @@ export default function SaleDetail() {
       queryClient.setQueryData(['sale', saleId], updatedSale)
       void queryClient.invalidateQueries({ queryKey: ['sales'] })
       void queryClient.invalidateQueries({ queryKey: ['pending-payouts'] })
+      notifySuccess('Payout completed')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   function submitPayout(event: FormEvent<HTMLFormElement>) {
@@ -74,10 +68,7 @@ export default function SaleDetail() {
     return (
       <Layout>
         <div className="app-page">
-          <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
-            <span className="skeleton-row" style={{ width: '42%' }} />
-            <span className="skeleton-row" style={{ width: '72%' }} />
-          </section>
+          <SkeletonLines widths={['42%', '72%']} />
         </div>
       </Layout>
     )

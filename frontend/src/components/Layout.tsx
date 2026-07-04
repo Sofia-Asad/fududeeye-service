@@ -232,7 +232,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             style={{ position: 'relative', width: 38, height: 38, borderRadius: 12, border: '1px solid var(--border)', background: '#fff', color: 'var(--muted)', display: 'grid', placeItems: 'center' }}
           >
             <Bell size={17} />
-            <span style={{ position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 999, background: 'var(--danger)' }} />
+            <span style={{ position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 999, background: 'var(--accent)' }} />
           </button>
           <button
             type="button"

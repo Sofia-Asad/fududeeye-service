@@ -15,7 +15,7 @@ export default function DataTable<T>({
 }: {
   columns: Column<T>[]
   rows: T[]
-  empty?: string
+  empty?: ReactNode
   variant?: 'card' | 'bare'
 }) {
   const emptyState = rows.length === 0 && (

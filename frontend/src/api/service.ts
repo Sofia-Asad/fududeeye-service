@@ -10,6 +10,7 @@ import type {
   PaginatedResponse,
   SuggestedMatch,
 } from '@/types/service'
+import type { AuditLogRow } from '@/types/reports'
 
 export interface DemandListParams {
   search?: string
@@ -57,6 +58,11 @@ export async function listSuggestedMatches(id: number) {
   return response.data
 }
 
+export async function getDemandHistory(id: number) {
+  const response = await api.get<{ results: AuditLogRow[] }>(`/demands/${id}/history/`)
+  return response.data.results
+}
+
 export async function listComplaints(params: ComplaintListParams = {}) {
   const response = await api.get<PaginatedResponse<Complaint>>('/complaints/', { params })
   return response.data
@@ -75,4 +81,9 @@ export async function createComplaint(payload: ComplaintPayload) {
 export async function updateComplaint(id: number, payload: ComplaintPayload) {
   const response = await api.patch<Complaint>(`/complaints/${id}/`, payload)
   return response.data
+}
+
+export async function getComplaintHistory(id: number) {
+  const response = await api.get<{ results: AuditLogRow[] }>(`/complaints/${id}/history/`)
+  return response.data.results
 }

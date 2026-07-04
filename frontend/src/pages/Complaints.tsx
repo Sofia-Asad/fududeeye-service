@@ -1,8 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, Filter, MessageSquareWarning, Plus, ShieldAlert, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 import { z } from 'zod'
 
 import { listCustomers } from '@/api/customers'
@@ -11,11 +10,14 @@ import { createComplaint, listComplaints } from '@/api/service'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
+import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import {
   COMPLAINT_PRIORITIES,
   COMPLAINT_PRIORITY_LABELS,
@@ -23,6 +25,9 @@ import {
   COMPLAINT_STATUS_LABELS,
   formatDate,
 } from '@/lib/service'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Complaint, ComplaintPriority, ComplaintStatus } from '@/types/service'
 
 type StatusFilter = 'all' | ComplaintStatus
@@ -32,7 +37,7 @@ const complaintSchema = z.object({
   customer: z.string().trim().min(1, 'Customer is required.'),
   related_sale: z.string().trim(),
   subject: z.string().trim().min(1, 'Subject is required.'),
-  description: z.string().trim().min(1, 'Description is required.'),
+  description: z.string().trim().min(1, 'Please enter a complaint description.'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
 })
 
@@ -46,30 +51,11 @@ const emptyForm: ComplaintForm = {
   priority: 'MEDIUM',
 }
 
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <label className="field-label" data-error={!!error}>
-      <span className="field-title">{label}</span>
-      {children}
-      {error && <span className="field-error">{error}</span>}
-    </label>
-  )
-}
-
 export default function Complaints() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formRef = useRef<HTMLFormElement>(null)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [priority, setPriority] = useState<PriorityFilter>('all')
@@ -77,6 +63,9 @@ export default function Complaints() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<ComplaintForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useFocusFirstError(errors, formRef)
+  useEscapeToClose(modalOpen, () => setModalOpen(false))
 
   useEffect(() => {
     setCurrentPage(1)
@@ -112,8 +101,10 @@ export default function Complaints() {
       setForm(emptyForm)
       setErrors({})
       void queryClient.invalidateQueries({ queryKey: ['complaints'] })
+      notifySuccess('Complaint created')
       navigate(`/complaints/${complaint.id}`)
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   const rows = complaints.data?.results ?? []
@@ -160,12 +151,7 @@ export default function Complaints() {
     event.preventDefault()
     const parsed = complaintSchema.safeParse(form)
     if (!parsed.success) {
-      const nextErrors: Record<string, string> = {}
-      parsed.error.issues.forEach(issue => {
-        const field = String(issue.path[0] ?? 'form')
-        if (!nextErrors[field]) nextErrors[field] = issue.message
-      })
-      setErrors(nextErrors)
+      setErrors(fieldErrors(parsed.error))
       return
     }
     const value = parsed.data
@@ -238,13 +224,27 @@ export default function Complaints() {
         >
           {complaints.isLoading && <DirectorySkeleton />}
           {complaints.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(complaints.error)}</div>}
-          {complaints.data && <DataTable columns={columns} rows={rows} empty="No complaints match the current filters." variant="bare" />}
+          {complaints.data && (
+            <DataTable
+              columns={columns}
+              rows={rows}
+              variant="bare"
+              empty={(
+                <EmptyState
+                  icon={<MessageSquareWarning size={18} />}
+                  title="No complaints found."
+                  subtitle="No customer issues match the current filters."
+                  action={<button type="button" onClick={() => setModalOpen(true)} className="primary-button"><Plus size={16} />New complaint</button>}
+                />
+              )}
+            />
+          )}
         </DirectoryCard>
       </div>
 
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setModalOpen(false)}>
-          <form onSubmit={submit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
+          <form ref={formRef} onSubmit={submit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
               <div>
                 <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New complaint</h2>
@@ -256,8 +256,8 @@ export default function Complaints() {
             </div>
 
             <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Customer" error={errors.customer}>
-                <select className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+              <Field label="Customer" error={errors.customer} name="customer">
+                <select autoFocus className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                   <option value="">Choose customer</option>
                   {(customers.data?.results ?? []).map(customer => (
                     <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
@@ -265,7 +265,7 @@ export default function Complaints() {
                 </select>
               </Field>
 
-              <Field label="Related sale">
+              <Field label="Related sale" name="related_sale">
                 <select className="control" value={form.related_sale} onChange={event => updateField('related_sale', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                   <option value="">No related sale</option>
                   {(sales.data?.results ?? []).map(sale => (
@@ -275,10 +275,10 @@ export default function Complaints() {
               </Field>
 
               <div className="modal-grid-2" style={{ gridTemplateColumns: 'minmax(0, 1fr) 180px', gap: 14 }}>
-                <Field label="Subject" error={errors.subject}>
+                <Field label="Subject" error={errors.subject} name="subject">
                   <input className="control" value={form.subject} onChange={event => updateField('subject', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </Field>
-                <Field label="Priority">
+                <Field label="Priority" name="priority">
                   <select className="control" value={form.priority} onChange={event => updateField('priority', event.target.value as ComplaintPriority)} style={{ width: '100%', padding: '0 12px' }}>
                     {COMPLAINT_PRIORITIES.map(nextPriority => (
                       <option key={nextPriority} value={nextPriority}>{COMPLAINT_PRIORITY_LABELS[nextPriority]}</option>
@@ -287,7 +287,7 @@ export default function Complaints() {
                 </Field>
               </div>
 
-              <Field label="Description" error={errors.description}>
+              <Field label="Description" error={errors.description} name="description">
                 <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </Field>
 

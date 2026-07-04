@@ -2,33 +2,24 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Banknote, Filter, HandCoins, Plus, ShoppingCart, TrendingUp } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { listSales } from '@/api/sales'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import { PAYMENT_METHOD_LABELS, PAYOUT_STATUS_LABELS, PAYOUT_STATUSES, formatDate } from '@/lib/sales'
 import type { PaymentMethod, PayoutStatus, Sale } from '@/types/sales'
 
 type PayoutFilter = 'all' | PayoutStatus
 type PaymentFilter = 'all' | PaymentMethod
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
 
 export default function Sales() {
   const { user } = useAuth()
@@ -153,7 +144,21 @@ export default function Sales() {
         >
           {sales.isLoading && <DirectorySkeleton />}
           {sales.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(sales.error)}</div>}
-          {sales.data && <DataTable columns={columns} rows={rows} empty="No sales match the current filters." variant="bare" />}
+          {sales.data && (
+            <DataTable
+              columns={columns}
+              rows={rows}
+              variant="bare"
+              empty={(
+                <EmptyState
+                  icon={<ShoppingCart size={18} />}
+                  title="No sales found."
+                  subtitle="Record your first sale or adjust the current filters."
+                  action={<Link to="/sales/new" className="primary-button"><Plus size={16} />New sale</Link>}
+                />
+              )}
+            />
+          )}
         </DirectoryCard>
       </div>
     </Layout>
