@@ -1,16 +1,18 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, MessageSquareWarning, Save, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, MessageSquareWarning, PlusCircle, Save, ShieldAlert, ArrowLeft } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
-import { getComplaint, updateComplaint } from '@/api/service'
-import ActivityFeed from '@/components/ActivityFeed'
+import { getComplaint, getComplaintHistory, updateComplaint } from '@/api/service'
+import ActivityFeed, { type ActivityFeedItem } from '@/components/ActivityFeed'
 import DetailMeta from '@/components/DetailMeta'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
+import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { changeLabel, formatDateTime } from '@/lib/auditLog'
+import { errorMessage } from '@/lib/errors'
 import {
   COMPLAINT_PRIORITIES,
   COMPLAINT_PRIORITY_LABELS,
@@ -18,16 +20,45 @@ import {
   COMPLAINT_STATUS_LABELS,
   formatDate,
 } from '@/lib/service'
-import type { ComplaintPriority, ComplaintStatus } from '@/types/service'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import type { AuditLogRow } from '@/types/reports'
+import type { Complaint, ComplaintPriority, ComplaintStatus } from '@/types/service'
 
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
+const COMPLAINT_FIELD_LABELS: Record<string, string> = {
+  status: 'Status',
+  priority: 'Priority',
+  assigned_to: 'Assignee',
+  resolution_notes: 'Resolution notes',
+  resolved_at: 'Resolved at',
+}
+
+function buildTimeline(current: Complaint, logs: AuditLogRow[]): ActivityFeedItem[] {
+  const items: ActivityFeedItem[] = [
+    {
+      title: 'Complaint opened',
+      caption: `${current.customer_name} - ${formatDate(current.created_at)}`,
+      icon: <MessageSquareWarning size={15} />,
+      tone: 'red',
+    },
+  ]
+
+  logs.forEach(log => {
+    const fields = Object.keys(log.changes).filter(field => field in COMPLAINT_FIELD_LABELS)
+    if (fields.length === 0) return
+    fields.forEach(field => {
+      const isStatus = field === 'status'
+      const isPriority = field === 'priority'
+      const valueLabels = isStatus ? COMPLAINT_STATUS_LABELS : isPriority ? COMPLAINT_PRIORITY_LABELS : {}
+      items.push({
+        title: `${COMPLAINT_FIELD_LABELS[field]} updated`,
+        caption: `${changeLabel(field, log.changes[field], COMPLAINT_FIELD_LABELS, valueLabels)} - ${formatDateTime(log.timestamp)}${log.user ? ` - ${log.user}` : ''}`,
+        icon: field === 'assigned_to' ? <AlertTriangle size={15} /> : field === 'resolution_notes' ? <Save size={15} /> : <ShieldAlert size={15} />,
+        tone: isStatus ? 'primary' : isPriority ? 'amber' : 'blue',
+      })
+    })
+  })
+
+  return items
 }
 
 export default function ComplaintDetail() {
@@ -35,6 +66,7 @@ export default function ComplaintDetail() {
   const complaintId = Number(id)
   const validComplaintId = Number.isFinite(complaintId) && complaintId > 0
   const queryClient = useQueryClient()
+  const formRef = useRef<HTMLFormElement>(null)
   const [status, setStatus] = useState<ComplaintStatus>('OPEN')
   const [priority, setPriority] = useState<ComplaintPriority>('MEDIUM')
   const [resolutionNotes, setResolutionNotes] = useState('')
@@ -42,6 +74,12 @@ export default function ComplaintDetail() {
   const complaint = useQuery({
     queryKey: ['complaint', complaintId],
     queryFn: () => getComplaint(complaintId),
+    enabled: validComplaintId,
+  })
+
+  const history = useQuery({
+    queryKey: ['complaint-history', complaintId],
+    queryFn: () => getComplaintHistory(complaintId),
     enabled: validComplaintId,
   })
 
@@ -61,7 +99,10 @@ export default function ComplaintDetail() {
     onSuccess: updated => {
       queryClient.setQueryData(['complaint', complaintId], updated)
       void queryClient.invalidateQueries({ queryKey: ['complaints'] })
+      void queryClient.invalidateQueries({ queryKey: ['complaint-history', complaintId] })
+      notifySuccess('Complaint updated')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -77,10 +118,7 @@ export default function ComplaintDetail() {
     return (
       <Layout>
         <div className="app-page">
-          <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
-            <span className="skeleton-row" style={{ width: '36%' }} />
-            <span className="skeleton-row" style={{ width: '68%' }} />
-          </section>
+          <SkeletonLines />
         </div>
       </Layout>
     )
@@ -104,7 +142,7 @@ export default function ComplaintDetail() {
           <PageHeader
             eyebrow="Complaint detail"
             title={current.ticket_number}
-            subtitle={`${current.subject} · opened ${formatDate(current.created_at)}`}
+            subtitle={`${current.subject} - opened ${formatDate(current.created_at)}`}
             actions={(
               <>
                 <StatusBadge status={current.status} />
@@ -137,7 +175,7 @@ export default function ComplaintDetail() {
             <aside style={{ display: 'grid', gap: 16 }}>
               <section className="card" style={{ padding: 20 }}>
                 <h2 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700 }}>Workflow</h2>
-                <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
+                <form ref={formRef} onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
                   <label className="field-label">
                     <span className="field-title">Status</span>
                     <select className="control" value={status} onChange={event => setStatus(event.target.value as ComplaintStatus)}>
@@ -166,13 +204,11 @@ export default function ComplaintDetail() {
                 </form>
               </section>
 
-              <ActivityFeed
-                items={[
-                  { title: 'Complaint opened', caption: `${current.customer_name} · ${formatDate(current.created_at)}`, icon: <MessageSquareWarning size={15} />, tone: 'red' },
-                  { title: current.assigned_to_name ? 'Assigned' : 'Unassigned', caption: current.assigned_to_name || 'No staff member assigned', icon: <AlertTriangle size={15} />, tone: current.assigned_to_name ? 'blue' : 'neutral' },
-                  { title: current.resolved_at ? 'Resolved' : 'Awaiting resolution', caption: current.resolved_at ? formatDate(current.resolved_at) : 'Resolution notes will appear here', icon: <Save size={15} />, tone: current.resolved_at ? 'primary' : 'amber' },
-                ]}
-              />
+              {history.isLoading && <SkeletonLines widths={['50%', '70%']} />}
+              {history.data && <ActivityFeed items={buildTimeline(current, history.data)} />}
+              {history.isError && (
+                <ActivityFeed items={[{ title: 'Complaint opened', caption: `${current.customer_name} - ${formatDate(current.created_at)}`, icon: <PlusCircle size={15} />, tone: 'red' }]} />
+              )}
             </aside>
           </div>
         </div>

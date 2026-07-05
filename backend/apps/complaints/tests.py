@@ -228,6 +228,20 @@ def test_related_sale_uses_set_null(customer, sale):
 
 
 @pytest.mark.django_db
+def test_complaint_history_visible_to_sales_user(client, sales_user, customer):
+    client.force_authenticate(user=sales_user)
+    create_resp = client.post('/api/v1/complaints/', complaint_payload(customer))
+    complaint_id = create_resp.data['id']
+
+    client.patch(f'/api/v1/complaints/{complaint_id}/', {'status': Complaint.Status.IN_PROGRESS})
+
+    resp = client.get(f'/api/v1/complaints/{complaint_id}/history/')
+    assert resp.status_code == 200
+    update_row = next(row for row in resp.data['results'] if row['action'] == 'UPDATE')
+    assert update_row['changes']['status'] == {'old': 'OPEN', 'new': 'IN_PROGRESS'}
+
+
+@pytest.mark.django_db
 def test_sales_user_can_create_but_cannot_delete_complaint(client, sales_user, customer):
     client.force_authenticate(user=sales_user)
     create_resp = client.post('/api/v1/complaints/', complaint_payload(customer, sales_user))

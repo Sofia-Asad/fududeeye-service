@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { Filter, RotateCcw, ShieldCheck, UserCheck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { listUsers } from '@/api/accounts'
 import { getAuditLogReport } from '@/api/reports'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
 import SummaryCard from '@/components/SummaryCard'
+import { changesSummary, formatDateTime } from '@/lib/auditLog'
+import { errorMessage } from '@/lib/errors'
 import type { AuditAction, AuditLogRow } from '@/types/reports'
 
 const ACTIONS: AuditAction[] = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'CUSTOM']
@@ -36,16 +38,6 @@ const ACTION_STYLES: Record<AuditAction, { bg: string; fg: string }> = {
 
 type ActionFilter = 'all' | AuditAction
 
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -54,40 +46,6 @@ function weekStartISO() {
   const date = new Date()
   date.setDate(date.getDate() - 6)
   return date.toISOString().slice(0, 10)
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
-function formatValue(value: unknown) {
-  if (value === null || value === undefined || value === '') return 'empty'
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
-}
-
-function isOldNew(value: unknown): value is { old?: unknown; new?: unknown } {
-  return typeof value === 'object' && value !== null && ('old' in value || 'new' in value)
-}
-
-function changesSummary(changes: Record<string, unknown>) {
-  const entries = Object.entries(changes)
-  if (entries.length === 0) return '-'
-
-  const parts = entries.slice(0, 3).map(([field, value]) => {
-    if (isOldNew(value)) {
-      return `${field}: ${formatValue(value.old)} -> ${formatValue(value.new)}`
-    }
-    return `${field}: ${formatValue(value)}`
-  })
-
-  if (entries.length > 3) {
-    parts.push(`+${entries.length - 3} more`)
-  }
-  return parts.join('; ')
 }
 
 function ActionBadge({ action }: { action: AuditAction }) {
@@ -219,7 +177,14 @@ export default function AuditLog() {
           >
             {audit.isLoading && <DirectorySkeleton />}
             {audit.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(audit.error)}</div>}
-            {audit.data && <DataTable columns={columns} rows={rows} empty="No audit events match the current filters." variant="bare" />}
+            {audit.data && (
+              <DataTable
+                columns={columns}
+                rows={rows}
+                variant="bare"
+                empty={<EmptyState icon={<ShieldCheck size={18} />} title="No audit events found." subtitle="No staff actions match the current filters." />}
+              />
+            )}
           </DirectoryCard>
         </div>
       </PermissionGate>

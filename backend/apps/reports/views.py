@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import IsFinanceViewer
 from apps.complaints.models import Complaint
 from apps.core.models import AuditLog
+from apps.core.serializers import serialize_audit_logs
 from apps.customers.models import Customer
 from apps.demands.models import Demand
 from apps.finance.models import Expense
@@ -312,18 +313,5 @@ def audit_log(request):
 
     return Response({
         'count': logs.count(),
-        'results': [
-            {
-                'id': log.pk,
-                'timestamp': log.timestamp.isoformat(),
-                'user': log.user.username if log.user else None,
-                'action': log.action,
-                'model_name': log.model_name,
-                'object_id': log.object_id,
-                'object_repr': log.object_repr,
-                'changes': log.changes,
-                'ip_address': log.ip_address,
-            }
-            for log in logs[:100]
-        ],
+        'results': serialize_audit_logs(logs[:100]),
     })

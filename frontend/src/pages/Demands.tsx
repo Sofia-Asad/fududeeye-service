@@ -1,8 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ClipboardList, Filter, PackageCheck, Plus, Target, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 import { z } from 'zod'
 
 import { listCustomers } from '@/api/customers'
@@ -10,13 +9,19 @@ import { listCategories } from '@/api/inventory'
 import { createDemand, listDemands } from '@/api/service'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
+import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import { DEMAND_STATUS_LABELS, DEMAND_STATUSES, formatDate } from '@/lib/service'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Demand, DemandStatus } from '@/types/service'
 
 type StatusFilter = 'all' | DemandStatus
@@ -50,16 +55,6 @@ const emptyForm: DemandForm = {
   notes: '',
 }
 
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
 function targetPrice(demand: Demand) {
   if (demand.target_price_min && demand.target_price_max) {
     return (
@@ -73,19 +68,10 @@ function targetPrice(demand: Demand) {
   return '-'
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <label className="field-label" data-error={!!error}>
-      <span className="field-title">{label}</span>
-      {children}
-      {error && <span className="field-error">{error}</span>}
-    </label>
-  )
-}
-
 export default function Demands() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formRef = useRef<HTMLFormElement>(null)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [category, setCategory] = useState<number | null>(null)
@@ -93,6 +79,9 @@ export default function Demands() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<DemandForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useFocusFirstError(errors, formRef)
+  useEscapeToClose(modalOpen, () => setModalOpen(false))
 
   useEffect(() => {
     setCurrentPage(1)
@@ -127,8 +116,10 @@ export default function Demands() {
       setForm(emptyForm)
       setErrors({})
       void queryClient.invalidateQueries({ queryKey: ['demands'] })
+      notifySuccess('Demand created')
       navigate(`/demands/${demand.id}`)
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   const rows = demands.data?.results ?? []
@@ -176,12 +167,7 @@ export default function Demands() {
     event.preventDefault()
     const parsed = demandSchema.safeParse(form)
     if (!parsed.success) {
-      const nextErrors: Record<string, string> = {}
-      parsed.error.issues.forEach(issue => {
-        const field = String(issue.path[0] ?? 'form')
-        if (!nextErrors[field]) nextErrors[field] = issue.message
-      })
-      setErrors(nextErrors)
+      setErrors(fieldErrors(parsed.error))
       return
     }
     const value = parsed.data
@@ -255,13 +241,27 @@ export default function Demands() {
         >
           {demands.isLoading && <DirectorySkeleton />}
           {demands.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(demands.error)}</div>}
-          {demands.data && <DataTable columns={columns} rows={rows} empty="No demands match the current filters." variant="bare" />}
+          {demands.data && (
+            <DataTable
+              columns={columns}
+              rows={rows}
+              variant="bare"
+              empty={(
+                <EmptyState
+                  icon={<ClipboardList size={18} />}
+                  title="No matching demands."
+                  subtitle="No customer requests match the current filters."
+                  action={<button type="button" onClick={() => setModalOpen(true)} className="primary-button"><Plus size={16} />New demand</button>}
+                />
+              )}
+            />
+          )}
         </DirectoryCard>
       </div>
 
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setModalOpen(false)}>
-          <form onSubmit={submit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
+          <form ref={formRef} onSubmit={submit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
               <div>
                 <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New demand</h2>
@@ -273,8 +273,8 @@ export default function Demands() {
             </div>
 
             <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Customer" error={errors.customer}>
-                <select className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+              <Field label="Customer" error={errors.customer} name="customer">
+                <select autoFocus className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                   <option value="">Choose customer</option>
                   {(customers.data?.results ?? []).map(customer => (
                     <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
@@ -282,11 +282,11 @@ export default function Demands() {
                 </select>
               </Field>
 
-              <Field label="Title" error={errors.title}>
+              <Field label="Title" error={errors.title} name="title">
                 <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
               </Field>
 
-              <Field label="Category">
+              <Field label="Category" name="category">
                 <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                   <option value="">Any category</option>
                   {(categories.data?.results ?? []).map(nextCategory => (
@@ -296,19 +296,19 @@ export default function Demands() {
               </Field>
 
               <div className="modal-grid-2" style={{ gap: 14 }}>
-                <Field label="Target min" error={errors.target_price_min}>
+                <Field label="Target min" error={errors.target_price_min} name="target_price_min">
                   <input className="control" value={form.target_price_min} onChange={event => updateField('target_price_min', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
                 </Field>
-                <Field label="Target max" error={errors.target_price_max}>
+                <Field label="Target max" error={errors.target_price_max} name="target_price_max">
                   <input className="control" value={form.target_price_max} onChange={event => updateField('target_price_max', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
                 </Field>
               </div>
 
-              <Field label="Description">
+              <Field label="Description" name="description">
                 <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </Field>
 
-              <Field label="Notes">
+              <Field label="Notes" name="notes">
                 <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </Field>
 

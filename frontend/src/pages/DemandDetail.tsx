@@ -1,31 +1,32 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, ClipboardList, PackageCheck, Save, Target } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
-import { getDemand, listSuggestedMatches, updateDemand } from '@/api/service'
-import ActivityFeed from '@/components/ActivityFeed'
+import { getDemand, getDemandHistory, listSuggestedMatches, updateDemand } from '@/api/service'
+import ActivityFeed, { type ActivityFeedItem } from '@/components/ActivityFeed'
 import DataTable, { type Column } from '@/components/DataTable'
 import DetailMeta from '@/components/DetailMeta'
 import DirectoryCard, { DirectorySkeleton } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
+import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { changeLabel, formatDateTime } from '@/lib/auditLog'
+import { errorMessage } from '@/lib/errors'
 import { DEMAND_STATUS_LABELS, DEMAND_STATUSES, formatDate } from '@/lib/service'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import type { AuditLogRow } from '@/types/reports'
 import type { Item } from '@/types/inventory'
-import type { DemandStatus } from '@/types/service'
+import type { Demand, DemandStatus } from '@/types/service'
 
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
+const DEMAND_FIELD_LABELS: Record<string, string> = {
+  status: 'Status',
+  matched_item: 'Matched item',
+  notes: 'Notes',
 }
 
 function targetPrice(min: string | null, max: string | null) {
@@ -41,11 +42,38 @@ function targetPrice(min: string | null, max: string | null) {
   return '-'
 }
 
+function buildTimeline(current: Demand, logs: AuditLogRow[]): ActivityFeedItem[] {
+  const items: ActivityFeedItem[] = [
+    {
+      title: 'Demand created',
+      caption: `${current.customer_name} - ${formatDate(current.created_at)}`,
+      icon: <ClipboardList size={15} />,
+      tone: 'amber',
+    },
+  ]
+
+  logs.forEach(log => {
+    const fields = Object.keys(log.changes).filter(field => field in DEMAND_FIELD_LABELS)
+    fields.forEach(field => {
+      const isStatus = field === 'status'
+      items.push({
+        title: isStatus ? 'Status changed' : `${DEMAND_FIELD_LABELS[field]} updated`,
+        caption: `${changeLabel(field, log.changes[field], DEMAND_FIELD_LABELS, isStatus ? DEMAND_STATUS_LABELS : {})} - ${formatDateTime(log.timestamp)}${log.user ? ` - ${log.user}` : ''}`,
+        icon: field === 'matched_item' ? <PackageCheck size={15} /> : <Save size={15} />,
+        tone: isStatus ? 'primary' : 'blue',
+      })
+    })
+  })
+
+  return items
+}
+
 export default function DemandDetail() {
   const { id } = useParams()
   const demandId = Number(id)
   const validDemandId = Number.isFinite(demandId) && demandId > 0
   const queryClient = useQueryClient()
+  const formRef = useRef<HTMLFormElement>(null)
   const [status, setStatus] = useState<DemandStatus>('OPEN')
   const [notes, setNotes] = useState('')
 
@@ -61,6 +89,12 @@ export default function DemandDetail() {
     enabled: validDemandId,
   })
 
+  const history = useQuery({
+    queryKey: ['demand-history', demandId],
+    queryFn: () => getDemandHistory(demandId),
+    enabled: validDemandId,
+  })
+
   const save = useMutation({
     mutationFn: () => updateDemand(demandId, { status, notes }),
     onSuccess: updated => {
@@ -68,7 +102,10 @@ export default function DemandDetail() {
       setStatus(updated.status)
       setNotes(updated.notes)
       void queryClient.invalidateQueries({ queryKey: ['demands'] })
+      void queryClient.invalidateQueries({ queryKey: ['demand-history', demandId] })
+      notifySuccess('Demand updated')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   const matchItem = useMutation({
@@ -81,7 +118,10 @@ export default function DemandDetail() {
       setStatus(updated.status)
       setNotes(updated.notes)
       void queryClient.invalidateQueries({ queryKey: ['demands'] })
+      void queryClient.invalidateQueries({ queryKey: ['demand-history', demandId] })
+      notifySuccess('Demand matched')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   useEffect(() => {
@@ -141,10 +181,7 @@ export default function DemandDetail() {
     return (
       <Layout>
         <div className="app-page">
-          <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
-            <span className="skeleton-row" style={{ width: '42%' }} />
-            <span className="skeleton-row" style={{ width: '72%' }} />
-          </section>
+          <SkeletonLines widths={['42%', '72%']} />
         </div>
       </Layout>
     )
@@ -169,7 +206,7 @@ export default function DemandDetail() {
           <PageHeader
             eyebrow="Demand detail"
             title={current.title}
-            subtitle={`${current.customer_name} · ${current.category_name || 'Any category'} · created ${formatDate(current.created_at)}`}
+            subtitle={`${current.customer_name} - ${current.category_name || 'Any category'} - created ${formatDate(current.created_at)}`}
             actions={<StatusBadge status={current.status} />}
           />
 
@@ -196,14 +233,21 @@ export default function DemandDetail() {
               <DirectoryCard title="Suggested matches" count={`${matchRows.length} active item matches`}>
                 {matches.isLoading && <DirectorySkeleton rows={4} />}
                 {matches.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(matches.error)}</div>}
-                {matches.data && <DataTable variant="bare" columns={matchColumns} rows={matchRows} empty="No matching active items found." />}
+                {matches.data && (
+                  <DataTable
+                    variant="bare"
+                    columns={matchColumns}
+                    rows={matchRows}
+                    empty={<EmptyState title="No matching demands." subtitle="No active inventory currently matches this request's category or budget." icon={<PackageCheck size={18} />} />}
+                  />
+                )}
               </DirectoryCard>
             </div>
 
             <aside style={{ display: 'grid', gap: 16 }}>
               <section className="card" style={{ padding: 20 }}>
                 <h2 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700 }}>Workflow</h2>
-                <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
+                <form ref={formRef} onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
                   <label className="field-label">
                     <span className="field-title">Status</span>
                     <select className="control" value={status} onChange={event => setStatus(event.target.value as DemandStatus)}>
@@ -224,13 +268,8 @@ export default function DemandDetail() {
                 </form>
               </section>
 
-              <ActivityFeed
-                items={[
-                  { title: 'Demand opened', caption: `${current.customer_name} · ${formatDate(current.created_at)}`, icon: <ClipboardList size={15} />, tone: 'amber' },
-                  { title: current.matched_item ? 'Item matched' : 'Waiting for a match', caption: current.matched_item_title || 'Use suggested matches when inventory is ready', icon: <PackageCheck size={15} />, tone: current.matched_item ? 'primary' : 'neutral' },
-                  { title: 'Last updated', caption: formatDate(current.updated_at), icon: <Save size={15} />, tone: 'blue' },
-                ]}
-              />
+              {history.isLoading && <SkeletonLines widths={['50%', '70%']} />}
+              {history.data && <ActivityFeed items={buildTimeline(current, history.data)} />}
             </aside>
           </div>
         </div>

@@ -1,65 +1,35 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, UserPlus } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
-import { z } from 'zod'
 
 import { createCustomer } from '@/api/customers'
 import ActionFooter from '@/components/ActionFooter'
 import FormSection, { FieldLabel, FormGrid } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
+import { emptyCustomerForm, customerSchema, type CustomerFormValues } from '@/lib/customerSchema'
+import { formErrorMessage } from '@/lib/errors'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { useFocusFirstError } from '@/lib/validation'
 
-const customerSchema = z.object({
-  full_name: z.string().trim().min(1, 'Full name is required.'),
-  phone: z.string().trim().min(1, 'Phone is required.'),
-  alternate_phone: z.string().trim(),
-  email: z.string().trim().refine(
-    value => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-    'Enter a valid email.',
-  ),
-  address: z.string().trim(),
-  notes: z.string().trim(),
-  is_active: z.boolean(),
-})
-
-type CustomerFormValues = z.infer<typeof customerSchema>
 type FieldErrors = Partial<Record<keyof CustomerFormValues, string>>
-
-const emptyForm: CustomerFormValues = {
-  full_name: '',
-  phone: '',
-  alternate_phone: '',
-  email: '',
-  address: '',
-  notes: '',
-  is_active: true,
-}
-
-function apiErrorMessage(error: unknown) {
-  if (!(error instanceof AxiosError)) {
-    return 'Customer could not be saved.'
-  }
-  const data = error.response?.data
-  if (data && typeof data === 'object') {
-    return Object.entries(data)
-      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : String(messages)}`)
-      .join(' ')
-  }
-  return error.response?.status ? `Customer could not be saved (${error.response.status}).` : 'Customer could not be saved.'
-}
 
 export default function NewCustomer() {
   const navigate = useNavigate()
-  const [form, setForm] = useState<CustomerFormValues>(emptyForm)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [form, setForm] = useState<CustomerFormValues>(emptyCustomerForm)
   const [errors, setErrors] = useState<FieldErrors>({})
+
+  useFocusFirstError(errors, formRef)
 
   const create = useMutation({
     mutationFn: createCustomer,
     onSuccess: customer => {
+      notifySuccess('Customer created')
       navigate(`/customers/${customer.id}`)
     },
+    onError: error => notifyError(formErrorMessage(error, 'Customer could not be saved.')),
   })
 
   function updateField<K extends keyof CustomerFormValues>(field: K, value: CustomerFormValues[K]) {
@@ -97,28 +67,28 @@ export default function NewCustomer() {
             subtitle="Create a buyer, seller, or consignment owner profile."
           />
 
-          <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
+          <form ref={formRef} onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
             <FormSection icon={<UserPlus size={18} />} title="Contact profile" description="Primary customer identity and reachable contact details.">
               <FormGrid>
-                <FieldLabel label="Full name" required error={errors.full_name}>
-                  <input className="control" value={form.full_name} onChange={event => updateField('full_name', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.full_name ? 'var(--danger)' : undefined, background: errors.full_name ? '#fffbfa' : undefined }} />
+                <FieldLabel label="Full name" required error={errors.full_name} name="full_name">
+                  <input className="control" value={form.full_name} onChange={event => updateField('full_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
-                <FieldLabel label="Phone" required error={errors.phone}>
-                  <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.phone ? 'var(--danger)' : undefined, background: errors.phone ? '#fffbfa' : undefined }} />
+                <FieldLabel label="Phone" required error={errors.phone} name="phone">
+                  <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
-                <FieldLabel label="Alternate phone" error={errors.alternate_phone}>
+                <FieldLabel label="Alternate phone" error={errors.alternate_phone} name="alternate_phone">
                   <input className="control" value={form.alternate_phone} onChange={event => updateField('alternate_phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
-                <FieldLabel label="Email" error={errors.email}>
-                  <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.email ? 'var(--danger)' : undefined, background: errors.email ? '#fffbfa' : undefined }} />
+                <FieldLabel label="Email" error={errors.email} name="email">
+                  <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
               </FormGrid>
 
-              <FieldLabel label="Address" error={errors.address}>
+              <FieldLabel label="Address" error={errors.address} name="address">
                 <textarea className="control" value={form.address} onChange={event => updateField('address', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </FieldLabel>
 
-              <FieldLabel label="Notes" error={errors.notes}>
+              <FieldLabel label="Notes" error={errors.notes} name="notes">
                 <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
               </FieldLabel>
 
@@ -128,7 +98,7 @@ export default function NewCustomer() {
               </label>
             </FormSection>
 
-            {create.isError && <div className="error-banner">{apiErrorMessage(create.error)}</div>}
+            {create.isError && <div className="error-banner">{formErrorMessage(create.error, 'Customer could not be saved.')}</div>}
 
             <ActionFooter>
               <Link to="/customers" className="secondary-button">Cancel</Link>

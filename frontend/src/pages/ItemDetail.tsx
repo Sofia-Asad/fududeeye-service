@@ -2,19 +2,21 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CircleDollarSign, ImageIcon, Package, Save, Tags, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { deleteItem, getItem, listCategories, updateItem } from '@/api/inventory'
 import { useAuth } from '@/auth/AuthContext'
 import ActionFooter from '@/components/ActionFooter'
 import DetailMeta from '@/components/DetailMeta'
+import EmptyState from '@/components/EmptyState'
 import FormSection, { FieldLabel, FormGrid } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
+import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage, formErrorMessage } from '@/lib/errors'
 import {
   ATTRIBUTE_FIELDS,
   CATEGORY_KIND_LABELS,
@@ -27,6 +29,7 @@ import {
   compactAttributes,
   formatDate,
 } from '@/lib/inventory'
+import { notifyError, notifySuccess } from '@/lib/toast'
 import type { Item, ItemCondition, ItemStatus } from '@/types/inventory'
 
 interface DetailForm {
@@ -38,29 +41,6 @@ interface DetailForm {
   condition: ItemCondition
   location: string
   status: ItemStatus
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
-function apiErrorMessage(error: unknown) {
-  if (!(error instanceof AxiosError)) {
-    return 'Item could not be updated.'
-  }
-  const data = error.response?.data
-  if (data && typeof data === 'object') {
-    return Object.entries(data)
-      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : String(messages)}`)
-      .join(' ')
-  }
-  return error.response?.status ? `Item could not be updated (${error.response.status}).` : 'Item could not be updated.'
 }
 
 function formFromItem(item: Item): DetailForm {
@@ -130,7 +110,9 @@ export default function ItemDetail() {
     onSuccess: updatedItem => {
       void queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.setQueryData(['item', itemId], updatedItem)
+      notifySuccess('Item updated')
     },
+    onError: error => notifyError(formErrorMessage(error, 'Item could not be updated.')),
   })
 
   const withdraw = useMutation({
@@ -138,15 +120,19 @@ export default function ItemDetail() {
     onSuccess: updatedItem => {
       void queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.setQueryData(['item', itemId], updatedItem)
+      notifySuccess('Item updated')
     },
+    onError: error => notifyError(formErrorMessage(error, 'Item could not be updated.')),
   })
 
   const remove = useMutation({
     mutationFn: () => deleteItem(itemId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['items'] })
+      notifySuccess('Deleted successfully')
       navigate('/items')
     },
+    onError: error => notifyError(formErrorMessage(error, 'Item could not be deleted.')),
   })
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -163,10 +149,7 @@ export default function ItemDetail() {
     return (
       <Layout>
         <div className="app-page">
-          <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
-            <span className="skeleton-row" style={{ width: '38%' }} />
-            <span className="skeleton-row" style={{ width: '74%' }} />
-          </section>
+          <SkeletonLines widths={['38%', '74%']} />
         </div>
       </Layout>
     )
@@ -303,7 +286,7 @@ export default function ItemDetail() {
               </FormSection>
 
               {(save.isError || withdraw.isError || remove.isError) && (
-                <div className="error-banner">{apiErrorMessage(save.error ?? withdraw.error ?? remove.error)}</div>
+                <div className="error-banner">{formErrorMessage(save.error ?? withdraw.error ?? remove.error, 'Item could not be updated.')}</div>
               )}
 
               {canEdit && (
@@ -339,12 +322,7 @@ export default function ItemDetail() {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', placeItems: 'center', gap: 8, minHeight: 140, color: 'var(--muted)', textAlign: 'center' }}>
-                    <span style={{ width: 42, height: 42, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--neutral-bg)', color: 'var(--neutral)' }}>
-                      <ImageIcon size={18} />
-                    </span>
-                    No images uploaded.
-                  </div>
+                  <EmptyState icon={<ImageIcon size={18} />} title="No images uploaded." />
                 )}
               </section>
             </aside>

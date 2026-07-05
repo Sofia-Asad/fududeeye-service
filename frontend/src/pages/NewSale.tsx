@@ -1,8 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CircleDollarSign, Save, ShoppingCart } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 import { z } from 'zod'
 
 import { listCustomers } from '@/api/customers'
@@ -15,7 +14,10 @@ import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
+import { formErrorMessage } from '@/lib/errors'
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS, decimalString, todayISO } from '@/lib/sales'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Item } from '@/types/inventory'
 import type { PaymentMethod } from '@/types/sales'
 
@@ -43,19 +45,6 @@ const emptyForm: SaleForm = {
   notes: '',
 }
 
-function apiErrorMessage(error: unknown) {
-  if (!(error instanceof AxiosError)) {
-    return 'Sale could not be saved.'
-  }
-  const data = error.response?.data
-  if (data && typeof data === 'object') {
-    return Object.entries(data)
-      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : String(messages)}`)
-      .join(' ')
-  }
-  return error.response?.status ? `Sale could not be saved (${error.response.status}).` : 'Sale could not be saved.'
-}
-
 function recommendedTotal(item: Item, quantity: number) {
   return Number(item.listed_price) * quantity
 }
@@ -63,8 +52,11 @@ function recommendedTotal(item: Item, quantity: number) {
 export default function NewSale() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const formRef = useRef<HTMLFormElement>(null)
   const [form, setForm] = useState<SaleForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useFocusFirstError(errors, formRef)
 
   const items = useQuery({
     queryKey: ['items', 'sale-picker'],
@@ -92,8 +84,10 @@ export default function NewSale() {
   const create = useMutation({
     mutationFn: createSale,
     onSuccess: sale => {
+      notifySuccess('Sale saved')
       navigate(`/sales/${sale.id}`)
     },
+    onError: error => notifyError(formErrorMessage(error, 'Sale could not be saved.')),
   })
 
   function updateField<K extends keyof SaleForm>(field: K, value: SaleForm[K]) {
@@ -118,12 +112,7 @@ export default function NewSale() {
     if (!user) return
     const parsed = saleSchema.safeParse(form)
     if (!parsed.success) {
-      const nextErrors: Record<string, string> = {}
-      parsed.error.issues.forEach(issue => {
-        const field = String(issue.path[0] ?? 'form')
-        if (!nextErrors[field]) nextErrors[field] = issue.message
-      })
-      setErrors(nextErrors)
+      setErrors(fieldErrors(parsed.error))
       return
     }
     const value = parsed.data
@@ -154,12 +143,12 @@ export default function NewSale() {
             subtitle="Record a completed sale. Stored payout and profit values come back from the API."
           />
 
-          <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
+          <form ref={formRef} onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
             <div className="content-sidebar-grid">
               <FormSection icon={<ShoppingCart size={18} />} title="Sale details" description="Select the item, buyer, price, date, and payment method.">
                 <div style={{ display: 'grid', gap: 16 }}>
-                  <FieldLabel label="Item" required error={errors.item}>
-                    <select className="control" value={form.item} onChange={event => updateField('item', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.item ? 'var(--danger)' : undefined, background: errors.item ? '#fffbfa' : undefined }}>
+                  <FieldLabel label="Item" required error={errors.item} name="item">
+                    <select className="control" value={form.item} onChange={event => updateField('item', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                       <option value="">Choose active item</option>
                       {(items.data?.results ?? []).filter(item => item.quantity_available > 0).map(item => (
                         <option key={item.id} value={item.id}>
@@ -169,8 +158,8 @@ export default function NewSale() {
                     </select>
                   </FieldLabel>
 
-                  <FieldLabel label="Buyer" required error={errors.buyer}>
-                    <select className="control" value={form.buyer} onChange={event => updateField('buyer', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.buyer ? 'var(--danger)' : undefined, background: errors.buyer ? '#fffbfa' : undefined }}>
+                  <FieldLabel label="Buyer" required error={errors.buyer} name="buyer">
+                    <select className="control" value={form.buyer} onChange={event => updateField('buyer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                       <option value="">Choose customer</option>
                       {(buyers.data?.results ?? []).map(customer => (
                         <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
@@ -179,17 +168,17 @@ export default function NewSale() {
                   </FieldLabel>
 
                   <FormGrid>
-                    <FieldLabel label="Quantity" required error={errors.quantity_sold}>
-                      <input className="control" value={form.quantity_sold} min={1} max={selectedItem?.quantity_available} onChange={event => updateField('quantity_sold', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px', borderColor: errors.quantity_sold ? 'var(--danger)' : undefined, background: errors.quantity_sold ? '#fffbfa' : undefined }} />
+                    <FieldLabel label="Quantity" required error={errors.quantity_sold} name="quantity_sold">
+                      <input className="control" value={form.quantity_sold} min={1} max={selectedItem?.quantity_available} onChange={event => updateField('quantity_sold', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px' }} />
                     </FieldLabel>
-                    <FieldLabel label="Sale price total" required error={errors.sale_price}>
+                    <FieldLabel label="Sale price total" required error={errors.sale_price} name="sale_price">
                       <span style={{ position: 'relative' }}>
                         <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                        <input className="control" value={form.sale_price} onChange={event => updateField('sale_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px', borderColor: errors.sale_price ? 'var(--danger)' : undefined, background: errors.sale_price ? '#fffbfa' : undefined }} />
+                        <input className="control" value={form.sale_price} onChange={event => updateField('sale_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
                       </span>
                     </FieldLabel>
-                    <FieldLabel label="Date" required error={errors.sale_date}>
-                      <input className="control" type="date" value={form.sale_date} onChange={event => updateField('sale_date', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.sale_date ? 'var(--danger)' : undefined, background: errors.sale_date ? '#fffbfa' : undefined }} />
+                    <FieldLabel label="Date" required error={errors.sale_date} name="sale_date">
+                      <input className="control" type="date" value={form.sale_date} onChange={event => updateField('sale_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                     </FieldLabel>
                     <FieldLabel label="Payment method">
                       <select className="control" value={form.payment_method} onChange={event => updateField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
@@ -253,7 +242,7 @@ export default function NewSale() {
               </aside>
             </div>
 
-            {create.isError && <div className="error-banner">{apiErrorMessage(create.error)}</div>}
+            {create.isError && <div className="error-banner">{formErrorMessage(create.error, 'Sale could not be saved.')}</div>}
 
             <ActionFooter>
               <Link to="/sales" className="secondary-button">Cancel</Link>

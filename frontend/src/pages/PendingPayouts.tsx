@@ -2,16 +2,20 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, HandCoins, ReceiptText, UserRound, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { listPendingPayouts, markSalePaid } from '@/api/sales'
 import { useAuth } from '@/auth/AuthContext'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
+import { SkeletonLines } from '@/components/Skeleton'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS, formatDate, initials, todayISO } from '@/lib/sales'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
 import type { PaymentMethod, PendingPayoutRow } from '@/types/sales'
 
 interface PayoutGroup {
@@ -19,16 +23,6 @@ interface PayoutGroup {
   owner: string
   total: number
   rows: PendingPayoutRow[]
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
 }
 
 function groupRows(rows: PendingPayoutRow[]) {
@@ -61,6 +55,8 @@ export default function PendingPayouts() {
     enabled: !!user?.can_view_finance,
   })
 
+  useEscapeToClose(!!modalGroup, () => setModalGroup(null))
+
   const groups = useMemo(() => groupRows(payouts.data?.results ?? []), [payouts.data?.results])
   const largestGroup = groups.reduce<PayoutGroup | null>((largest, group) => (!largest || group.total > largest.total ? group : largest), null)
 
@@ -79,7 +75,9 @@ export default function PendingPayouts() {
       setModalGroup(null)
       void queryClient.invalidateQueries({ queryKey: ['pending-payouts'] })
       void queryClient.invalidateQueries({ queryKey: ['sales'] })
+      notifySuccess('Payout completed')
     },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -110,18 +108,14 @@ export default function PendingPayouts() {
             <SummaryCard label="Rows" value={payouts.data?.results.length ?? 0} caption="Pending sale rows" icon={<ReceiptText size={18} />} tone="blue" />
           </div>
 
-          {payouts.isLoading && (
-            <section className="card" style={{ padding: 22, display: 'grid', gap: 14 }}>
-              <span className="skeleton-row" style={{ width: '60%' }} />
-              <span className="skeleton-row" style={{ width: '84%' }} />
-              <span className="skeleton-row" style={{ width: '48%' }} />
-            </section>
-          )}
+          {payouts.isLoading && <SkeletonLines widths={['60%', '84%', '48%']} />}
           {payouts.isError && (
             <div className="error-banner">{errorMessage(payouts.error)}</div>
           )}
           {payouts.data && groups.length === 0 && (
-            <section className="card" style={{ padding: 42, color: 'var(--muted)', textAlign: 'center' }}>No pending payouts.</section>
+            <section className="card">
+              <EmptyState icon={<HandCoins size={18} />} title="No pending payouts." subtitle="Every consignment owner is paid up for now." />
+            </section>
           )}
           {groups.length > 0 && (
             <div style={{ display: 'grid', gap: 14 }}>
@@ -174,7 +168,7 @@ export default function PendingPayouts() {
               <div style={{ padding: '22px 24px', display: 'grid', gap: 16 }}>
                 <label className="field-label">
                   <span className="field-title">Payment method</span>
-                  <select className="control" value={payoutMethod} onChange={event => setPayoutMethod(event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
+                  <select autoFocus className="control" value={payoutMethod} onChange={event => setPayoutMethod(event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
                     {PAYMENT_METHODS.map(method => (
                       <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
                     ))}

@@ -1,8 +1,11 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner'
 
 import { AuthProvider } from '@/auth/AuthContext'
 import ProtectedRoute from '@/auth/ProtectedRoute'
+import { SkeletonLines } from '@/components/Skeleton'
 import Dashboard from '@/pages/Dashboard'
 import ItemDetail from '@/pages/ItemDetail'
 import Items from '@/pages/Items'
@@ -12,12 +15,8 @@ import Demands from '@/pages/Demands'
 import Complaints from '@/pages/Complaints'
 import ComplaintDetail from '@/pages/ComplaintDetail'
 import Expenses from '@/pages/Expenses'
+import ExpenseDetail from '@/pages/ExpenseDetail'
 import PendingPayouts from '@/pages/PendingPayouts'
-import ProfitReport from '@/pages/ProfitReport'
-import Reports from '@/pages/Reports'
-import SalesReport from '@/pages/SalesReport'
-import AuditLog from '@/pages/AuditLog'
-import Users from '@/pages/Users'
 import DemandDetail from '@/pages/DemandDetail'
 import SaleDetail from '@/pages/SaleDetail'
 import Sales from '@/pages/Sales'
@@ -26,12 +25,37 @@ import Customers from '@/pages/Customers'
 import Login from '@/pages/Login'
 import NewCustomer from '@/pages/NewCustomer'
 
+const ProfitReport = lazy(() => import('@/pages/ProfitReport'))
+const Reports = lazy(() => import('@/pages/Reports'))
+const SalesReport = lazy(() => import('@/pages/SalesReport'))
+const AuditLog = lazy(() => import('@/pages/AuditLog'))
+const Users = lazy(() => import('@/pages/Users'))
+
 const queryClient = new QueryClient()
+
+function RouteFallback() {
+  return (
+    <div className="app-page">
+      <SkeletonLines />
+    </div>
+  )
+}
 
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <Toaster
+          position="top-right"
+          richColors
+          toastOptions={{
+            style: {
+              fontFamily: 'var(--font)',
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+            },
+          }}
+        />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -50,13 +74,14 @@ export default function App() {
             <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
             <Route path="/complaints/:id" element={<ProtectedRoute><ComplaintDetail /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+            <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
             <Route path="/sales/payouts" element={<ProtectedRoute><PendingPayouts /></ProtectedRoute>} />
             <Route path="/payouts" element={<Navigate to="/sales/payouts" replace />} />
-            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-            <Route path="/reports/sales" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
-            <Route path="/reports/profit" element={<ProtectedRoute><ProfitReport /></ProtectedRoute>} />
-            <Route path="/audit" element={<ProtectedRoute><AuditLog /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Reports /></Suspense></ProtectedRoute>} />
+            <Route path="/reports/sales" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><SalesReport /></Suspense></ProtectedRoute>} />
+            <Route path="/reports/profit" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><ProfitReport /></Suspense></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><AuditLog /></Suspense></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Users /></Suspense></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

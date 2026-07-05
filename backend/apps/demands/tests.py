@@ -164,6 +164,20 @@ def test_suggest_matches_filters_active_same_category_inside_price_range(
 
 
 @pytest.mark.django_db
+def test_demand_history_tracks_status_change(client, admin_user, customer, category):
+    client.force_authenticate(user=admin_user)
+    create_resp = client.post('/api/v1/demands/', demand_payload(customer, category))
+    demand_id = create_resp.data['id']
+
+    client.patch(f'/api/v1/demands/{demand_id}/', {'status': Demand.Status.FULFILLED})
+
+    resp = client.get(f'/api/v1/demands/{demand_id}/history/')
+    assert resp.status_code == 200
+    update_row = next(row for row in resp.data['results'] if row['action'] == 'UPDATE')
+    assert update_row['changes']['status'] == {'old': 'OPEN', 'new': 'FULFILLED'}
+
+
+@pytest.mark.django_db
 def test_sales_user_cannot_delete_demand(client, sales_user, customer, category):
     demand = Demand.objects.create(customer=customer, title='Laptop wanted', category=category)
 

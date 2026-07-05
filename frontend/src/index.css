@@ -21,18 +21,19 @@
   --border-strong: #e5e1d3;
   --row-line: #f3f1e8;
   --thead-bg: #faf9f4;
-  --primary: #17795c;
-  --primary-hover: #136a50;
-  --primary-soft: #e6f1ea;
-  --primary-deep: #1c4a3c;
-  --accent: #17795c;
-  --accent-fg: #ffffff;
-  --accent-weak: #e6f1ea;
-  --accent-dark: #136a50;
-  --gold: #e8a33d;
+  /* Fududeeye brand: deep navy primary, yellow secondary accent */
+  --primary: #1a2057;
+  --primary-hover: #12163f;
+  --primary-soft: #e7e8f2;
+  --primary-deep: #10143a;
+  --accent: #f2b705;
+  --accent-fg: #1a2057;
+  --accent-weak: #fdf3d6;
+  --accent-dark: #c99a04;
+  --gold: #f2b705;
   --navy: #3d5aa8;
   --navy-weak: #e8edf6;
-  /* semantic */
+  /* semantic (independent of brand colors) */
   --success: #17795c;
   --success-bg: #e6f1ea;
   --warning: #b07818;
@@ -51,9 +52,9 @@
   --sidebar-fg: #22302a;
   --sidebar-muted: #75806f;
   --sidebar-text: #3c4a42;
-  --sidebar-active-bg: #e6f1ea;
-  --sidebar-active-text: #136a50;
-  --sidebar-accent: #17795c;
+  --sidebar-active-bg: #e7e8f2;
+  --sidebar-active-text: #12163f;
+  --sidebar-accent: #1a2057;
 }
 
 * { box-sizing: border-box; }
@@ -89,7 +90,7 @@ select:focus,
 textarea:focus,
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid rgba(23, 121, 92, .35);
+  outline: 2px solid rgba(26, 32, 87, .35);
   outline-offset: 2px;
 }
 
@@ -314,8 +315,8 @@ a:focus-visible {
 }
 
 .control:focus {
-  border-color: rgba(23, 121, 92, .58);
-  box-shadow: 0 0 0 3px rgba(23, 121, 92, .10), inset 0 1px 0 rgba(34, 48, 42, .02);
+  border-color: rgba(26, 32, 87, .58);
+  box-shadow: 0 0 0 3px rgba(26, 32, 87, .10), inset 0 1px 0 rgba(34, 48, 42, .02);
 }
 
 .control:disabled {
@@ -443,7 +444,7 @@ textarea.control {
   border: 1px solid var(--primary);
   background: var(--primary);
   color: #ffffff;
-  box-shadow: 0 1px 2px rgba(23, 121, 92, .3);
+  box-shadow: 0 1px 2px rgba(26, 32, 87, .3);
 }
 
 .primary-button:hover {

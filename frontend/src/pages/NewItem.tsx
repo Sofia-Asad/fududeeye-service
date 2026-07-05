@@ -1,8 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CircleDollarSign, Package, Save, Tags } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 import { z } from 'zod'
 
 import { listCustomers } from '@/api/customers'
@@ -13,6 +12,7 @@ import FormSection, { FieldLabel, FormGrid, SegmentedControl } from '@/component
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
+import { formErrorMessage } from '@/lib/errors'
 import {
   ATTRIBUTE_FIELDS,
   CATEGORY_KIND_LABELS,
@@ -20,6 +20,8 @@ import {
   ITEM_CONDITIONS,
   compactAttributes,
 } from '@/lib/inventory'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { ItemCondition, ItemStatus, OwnerType } from '@/types/inventory'
 
 const moneyPattern = /^\d+(\.\d{1,2})?$/
@@ -68,35 +70,16 @@ const emptyForm: ItemFormValues = {
   description: '',
 }
 
-function apiErrorMessage(error: unknown) {
-  if (!(error instanceof AxiosError)) {
-    return 'Item could not be saved.'
-  }
-  const data = error.response?.data
-  if (data && typeof data === 'object') {
-    return Object.entries(data)
-      .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : String(messages)}`)
-      .join(' ')
-  }
-  return error.response?.status ? `Item could not be saved (${error.response.status}).` : 'Item could not be saved.'
-}
-
-function moneyInputStyle(hasError?: boolean) {
-  return {
-    width: '100%',
-    padding: '0 12px 0 32px',
-    borderColor: hasError ? 'var(--danger)' : undefined,
-    background: hasError ? '#fffbfa' : undefined,
-  }
-}
-
 export default function NewItem() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const formRef = useRef<HTMLFormElement>(null)
   const canManageInventory = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const [form, setForm] = useState<ItemFormValues>(emptyForm)
   const [attributeValues, setAttributeValues] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useFocusFirstError(errors, formRef)
 
   const categories = useQuery({
     queryKey: ['categories'],
@@ -118,8 +101,10 @@ export default function NewItem() {
   const create = useMutation({
     mutationFn: createItem,
     onSuccess: item => {
+      notifySuccess('Item saved')
       navigate(`/items/${item.id}`)
     },
+    onError: error => notifyError(formErrorMessage(error, 'Item could not be saved.')),
   })
 
   const basePrice = form.owner_type === 'CONSIGNMENT' ? Number(form.owner_asking_price || 0) : Number(form.cost_price || 0)
@@ -147,12 +132,7 @@ export default function NewItem() {
     event.preventDefault()
     const parsed = itemSchema.safeParse(form)
     if (!parsed.success) {
-      const nextErrors: Record<string, string> = {}
-      parsed.error.issues.forEach(issue => {
-        const field = String(issue.path[0] ?? 'form')
-        if (!nextErrors[field]) nextErrors[field] = issue.message
-      })
-      setErrors(nextErrors)
+      setErrors(fieldErrors(parsed.error))
       return
     }
 
@@ -190,22 +170,22 @@ export default function NewItem() {
             subtitle="Category and owner type control the fields below."
           />
 
-          <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
+          <form ref={formRef} onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
             <FormSection icon={<Package size={18} />} title="Item basics" description="Describe the inventory record and where it will be tracked.">
               <FormGrid>
-                <FieldLabel label="Title" required error={errors.title}>
-                  <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.title ? 'var(--danger)' : undefined, background: errors.title ? '#fffbfa' : undefined }} />
+                <FieldLabel label="Title" required error={errors.title} name="title">
+                  <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
-                <FieldLabel label="Category" required error={errors.category}>
-                  <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.category ? 'var(--danger)' : undefined, background: errors.category ? '#fffbfa' : undefined }}>
+                <FieldLabel label="Category" required error={errors.category} name="category">
+                  <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                     <option value="">Choose category</option>
                     {(categories.data?.results ?? []).map(category => (
                       <option key={category.id} value={category.id}>{category.name} - {CATEGORY_KIND_LABELS[category.kind]}</option>
                     ))}
                   </select>
                 </FieldLabel>
-                <FieldLabel label="Quantity" required error={errors.quantity}>
-                  <input className="control" value={form.quantity} onChange={event => updateField('quantity', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px', borderColor: errors.quantity ? 'var(--danger)' : undefined, background: errors.quantity ? '#fffbfa' : undefined }} />
+                <FieldLabel label="Quantity" required error={errors.quantity} name="quantity">
+                  <input className="control" value={form.quantity} onChange={event => updateField('quantity', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
                 <FieldLabel label="Condition">
                   <select className="control" value={form.condition} onChange={event => updateField('condition', event.target.value as ItemCondition)} style={{ width: '100%', padding: '0 12px' }}>
@@ -247,34 +227,34 @@ export default function NewItem() {
                 <FormGrid>
                   {form.owner_type === 'CONSIGNMENT' ? (
                     <>
-                      <FieldLabel label="Owner" required error={errors.owner}>
-                        <select className="control" value={form.owner} onChange={event => updateField('owner', event.target.value)} style={{ width: '100%', padding: '0 12px', borderColor: errors.owner ? 'var(--danger)' : undefined, background: errors.owner ? '#fffbfa' : undefined }}>
+                      <FieldLabel label="Owner" required error={errors.owner} name="owner">
+                        <select className="control" value={form.owner} onChange={event => updateField('owner', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                           <option value="">Choose customer</option>
                           {(customers.data?.results ?? []).map(customer => (
                             <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
                           ))}
                         </select>
                       </FieldLabel>
-                      <FieldLabel label="Owner asking price" required error={errors.owner_asking_price}>
+                      <FieldLabel label="Owner asking price" required error={errors.owner_asking_price} name="owner_asking_price">
                         <span style={{ position: 'relative' }}>
                           <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                          <input className="control" value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} inputMode="decimal" style={moneyInputStyle(!!errors.owner_asking_price)} />
+                          <input className="control" value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
                         </span>
                       </FieldLabel>
                     </>
                   ) : (
-                    <FieldLabel label="Cost price" required error={errors.cost_price}>
+                    <FieldLabel label="Cost price" required error={errors.cost_price} name="cost_price">
                       <span style={{ position: 'relative' }}>
                         <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                        <input className="control" value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} inputMode="decimal" style={moneyInputStyle(!!errors.cost_price)} />
+                        <input className="control" value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
                       </span>
                     </FieldLabel>
                   )}
 
-                  <FieldLabel label="Listed price" required error={errors.listed_price}>
+                  <FieldLabel label="Listed price" required error={errors.listed_price} name="listed_price">
                     <span style={{ position: 'relative' }}>
                       <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                      <input className="control" value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} inputMode="decimal" style={moneyInputStyle(!!errors.listed_price)} />
+                      <input className="control" value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
                     </span>
                   </FieldLabel>
                 </FormGrid>
@@ -313,7 +293,7 @@ export default function NewItem() {
               </FormSection>
             )}
 
-            {create.isError && <div className="error-banner">{apiErrorMessage(create.error)}</div>}
+            {create.isError && <div className="error-banner">{formErrorMessage(create.error, 'Item could not be saved.')}</div>}
 
             <ActionFooter note="Sales role can only submit as Draft">
               <Link to="/items" className="secondary-button">Cancel</Link>

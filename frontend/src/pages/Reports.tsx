@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BarChart3, CalendarDays, ReceiptText, TrendingUp, WalletCards } from 'lucide-react'
+import { ArrowRight, BarChart3, CalendarDays, ClipboardList, ReceiptText, TrendingUp, WalletCards } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import {
   getDashboardReport,
@@ -16,35 +15,23 @@ import {
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
 import SummaryCard from '@/components/SummaryCard'
+import { CHART_COLORS, chartAxisTick, chartLegendStyle, chartTooltipStyle, compactMoney, moneyTooltip } from '@/lib/chartTheme'
+import { errorMessage } from '@/lib/errors'
 import { formatDate, todayISO } from '@/lib/sales'
 import type { DemandSupplyRow, TopRequestedRow } from '@/types/reports'
 
 const page = { padding: '30px 32px 40px' } as const
-const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 function monthStartISO() {
   const date = new Date()
   date.setDate(1)
   return date.toISOString().slice(0, 10)
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
-function moneyTooltip(value: unknown, name: unknown) {
-  return [compactMoney.format(Number(value)), String(name)]
 }
 
 export default function Reports() {
@@ -172,15 +159,16 @@ export default function Reports() {
                   {chartRows.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartRows} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-                        <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#75806F' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: '#75806F' }} axisLine={false} tickLine={false} tickFormatter={value => compactMoney.format(Number(value))} />
-                        <Tooltip formatter={moneyTooltip} contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #ECEADF' }} />
-                        <Bar dataKey="Sales" radius={[6, 6, 0, 0]} fill="#E8DDC4" />
-                        <Bar dataKey="Profit" radius={[6, 6, 0, 0]} fill="#17795C" />
+                        <XAxis dataKey="period" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                        <YAxis tick={chartAxisTick} axisLine={false} tickLine={false} tickFormatter={value => compactMoney.format(Number(value))} />
+                        <Tooltip formatter={moneyTooltip} contentStyle={chartTooltipStyle} />
+                        <Legend iconType="circle" wrapperStyle={chartLegendStyle} />
+                        <Bar dataKey="Sales" radius={[6, 6, 0, 0]} fill={CHART_COLORS.neutralFill} />
+                        <Bar dataKey="Profit" radius={[6, 6, 0, 0]} fill={CHART_COLORS.primary} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 14 }}>No profit data in this period.</div>
+                    <EmptyState icon={<BarChart3 size={18} />} title="No profit data in this period." />
                   )}
                 </div>
               </section>
@@ -202,7 +190,7 @@ export default function Reports() {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ minHeight: 160, display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 14 }}>No demand data yet.</div>
+                  <EmptyState icon={<ClipboardList size={18} />} title="No demand data yet." />
                 )}
               </section>
             </div>
@@ -234,11 +222,11 @@ export default function Reports() {
                 )}
                 count={`${demandRows.length} active matches`}
               >
-                <DataTable columns={demandColumns} rows={demandRows} empty="No open demands have matches yet." variant="bare" />
+                <DataTable columns={demandColumns} rows={demandRows} empty={<EmptyState icon={<ClipboardList size={18} />} title="No matching demands." subtitle="No open demands have matches yet." />} variant="bare" />
               </DirectoryCard>
 
               <DirectoryCard title="Requested categories" count={`${topRows.length} categories`}>
-                <DataTable columns={requestedColumns} rows={topRows.slice(0, 6)} empty="No requested categories yet." variant="bare" />
+                <DataTable columns={requestedColumns} rows={topRows.slice(0, 6)} empty={<EmptyState icon={<ReceiptText size={18} />} title="No requested categories yet." />} variant="bare" />
               </DirectoryCard>
             </div>
           </div>

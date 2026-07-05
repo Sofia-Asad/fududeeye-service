@@ -1,8 +1,12 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from rest_framework import filters, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from apps.accounts.permissions import DenyDeleteUnlessAdmin, IsFinanceViewer
+from apps.core.models import AuditLog
+from apps.core.serializers import serialize_audit_logs
 
 from .models import Expense, ExpenseCategory
 from .serializers import ExpenseCategorySerializer, ExpenseSerializer
@@ -38,3 +42,9 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         if end:
             queryset = queryset.filter(expense_date__lte=end)
         return queryset
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        expense = self.get_object()
+        logs = AuditLog.objects.filter(model_name='Expense', object_id=str(expense.pk)).select_related('user')
+        return Response({'results': serialize_audit_logs(logs)})

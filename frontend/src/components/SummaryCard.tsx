@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 const TONES = {
   primary: { bg: 'var(--primary-soft)', fg: 'var(--primary-hover)' },
   amber: { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
+  gold: { bg: 'var(--accent-weak)', fg: 'var(--accent-dark)' },
   red: { bg: 'var(--danger-bg)', fg: 'var(--money-owed)' },
   blue: { bg: 'var(--info-bg)', fg: 'var(--info)' },
   neutral: { bg: 'var(--neutral-bg)', fg: 'var(--neutral)' },

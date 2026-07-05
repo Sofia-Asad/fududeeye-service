@@ -155,6 +155,34 @@ def test_search_expenses_by_description(client, admin_user, category):
 
 
 @pytest.mark.django_db
+def test_expense_history_tracks_changes(client, manager_user, category):
+    client.force_authenticate(user=manager_user)
+    create_resp = client.post('/api/v1/expenses/', expense_payload(category))
+    expense_id = create_resp.data['id']
+
+    client.patch(f'/api/v1/expenses/{expense_id}/', {'amount': '500.00'})
+
+    resp = client.get(f'/api/v1/expenses/{expense_id}/history/')
+    assert resp.status_code == 200
+    actions = [row['action'] for row in resp.data['results']]
+    assert 'CREATE' in actions
+    assert 'UPDATE' in actions
+    update_row = next(row for row in resp.data['results'] if row['action'] == 'UPDATE')
+    assert update_row['changes']['amount'] == {'old': '450.00', 'new': '500.00'}
+
+
+@pytest.mark.django_db
+def test_sales_user_gets_403_reading_expense_history(client, sales_user, manager_user, category):
+    client.force_authenticate(user=manager_user)
+    create_resp = client.post('/api/v1/expenses/', expense_payload(category))
+    expense_id = create_resp.data['id']
+
+    client.force_authenticate(user=sales_user)
+    resp = client.get(f'/api/v1/expenses/{expense_id}/history/')
+    assert resp.status_code == 403
+
+
+@pytest.mark.django_db
 def test_manager_cannot_delete_expense(client, manager_user, category):
     expense = Expense.objects.create(
         category=category,

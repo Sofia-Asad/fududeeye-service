@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Filter, Plus, UserPlus, UsersRound } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 
 import { listCustomers } from '@/api/customers'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
+import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import { errorMessage } from '@/lib/errors'
+import { initials } from '@/lib/sales'
 import type { Customer } from '@/types/customer'
 
 type ActiveFilter = 'all' | 'active' | 'inactive'
@@ -25,26 +27,6 @@ function customerRoles(customer: Customer) {
   if (customer.is_buyer) roles.push('Buyer')
   if (customer.is_seller) roles.push('Seller')
   return roles.length ? roles : ['New']
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    if (status === 403) return 'You do not have permission to do that.'
-    if (status === 401) return 'Please sign in again.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
-  }
-  return 'Request failed.'
-}
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
 }
 
 export default function Customers() {
@@ -171,7 +153,21 @@ export default function Customers() {
         >
           {customers.isLoading && <DirectorySkeleton />}
           {customers.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(customers.error)}</div>}
-          {customers.data && <DataTable columns={columns} rows={rows} empty="No customers found." variant="bare" />}
+          {customers.data && (
+            <DataTable
+              columns={columns}
+              rows={rows}
+              variant="bare"
+              empty={(
+                <EmptyState
+                  icon={<UsersRound size={18} />}
+                  title="No customers yet."
+                  subtitle="Create your first customer to start tracking buyers and sellers."
+                  action={<Link to="/customers/new" className="primary-button"><Plus size={16} />New customer</Link>}
+                />
+              )}
+            />
+          )}
         </DirectoryCard>
       </div>
     </Layout>

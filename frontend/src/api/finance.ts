@@ -6,6 +6,7 @@ import type {
   ExpensePayload,
   PaginatedResponse,
 } from '@/types/finance'
+import type { AuditLogRow } from '@/types/reports'
 import type { PaymentMethod } from '@/types/sales'
 
 export interface ExpenseCategoryListParams {
@@ -44,4 +45,19 @@ export async function listExpenses(params: ExpenseListParams = {}) {
 export async function createExpense(payload: ExpensePayload) {
   const response = await api.post<Expense>('/expenses/', payload)
   return response.data
+}
+
+export async function getExpense(id: number) {
+  const response = await api.get<Expense>(`/expenses/${id}/`)
+  return response.data
+}
+
+export async function updateExpense(id: number, payload: Partial<ExpensePayload>) {
+  const response = await api.patch<Expense>(`/expenses/${id}/`, payload)
+  return response.data
+}
+
+export async function getExpenseHistory(id: number) {
+  const response = await api.get<{ results: AuditLogRow[] }>(`/expenses/${id}/history/`)
+  return response.data.results
 }
