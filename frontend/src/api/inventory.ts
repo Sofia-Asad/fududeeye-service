@@ -4,6 +4,7 @@ import type {
   CategoryKind,
   CategoryPayload,
   Item,
+  ItemImage,
   ItemPayload,
   ItemStatus,
   OwnerType,
@@ -60,4 +61,17 @@ export async function updateItem(id: number, payload: ItemPayload) {
 
 export async function deleteItem(id: number) {
   await api.delete(`/items/${id}/`)
+}
+
+export async function uploadItemImage(itemId: number, file: File) {
+  const formData = new FormData()
+  formData.append('image', file)
+  const response = await api.post<ItemImage>(`/items/${itemId}/images/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return response.data
+}
+
+export async function deleteItemImage(itemId: number, imageId: number) {
+  await api.delete(`/items/${itemId}/images/${imageId}/`)
 }

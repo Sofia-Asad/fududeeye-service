@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CircleDollarSign, ImageIcon, Package, Save, Tags, Trash2 } from 'lucide-react'
+import { ArrowLeft, CircleDollarSign, Globe, Lock, Package, Pencil, Save, Tags, Trash2, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { listCustomers } from '@/api/customers'
 import { deleteItem, getItem, listCategories, updateItem } from '@/api/inventory'
 import { useAuth } from '@/auth/AuthContext'
 import ActionFooter from '@/components/ActionFooter'
 import DetailMeta from '@/components/DetailMeta'
-import EmptyState from '@/components/EmptyState'
-import FormSection, { FieldLabel, FormGrid } from '@/components/FormSection'
+import FormSection, { FieldLabel, FormGrid, SegmentedControl } from '@/components/FormSection'
+import ItemImageManager from '@/components/ItemImageManager'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
@@ -30,12 +31,16 @@ import {
   formatDate,
 } from '@/lib/inventory'
 import { notifyError, notifySuccess } from '@/lib/toast'
-import type { Item, ItemCondition, ItemStatus } from '@/types/inventory'
+import type { Item, ItemCondition, ItemStatus, OwnerType } from '@/types/inventory'
 
 interface DetailForm {
   title: string
   description: string
   category: string
+  owner_type: OwnerType
+  owner: string
+  owner_asking_price: string
+  cost_price: string
   listed_price: string
   quantity: string
   condition: ItemCondition
@@ -48,6 +53,10 @@ function formFromItem(item: Item): DetailForm {
     title: item.title,
     description: item.description,
     category: String(item.category),
+    owner_type: item.owner_type,
+    owner: item.owner ? String(item.owner) : '',
+    owner_asking_price: item.owner_asking_price ?? '',
+    cost_price: item.cost_price ?? '',
     listed_price: item.listed_price,
     quantity: String(item.quantity),
     condition: item.condition,
@@ -63,6 +72,7 @@ export default function ItemDetail() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [form, setForm] = useState<DetailForm | null>(null)
   const [attributeValues, setAttributeValues] = useState<Record<string, string>>({})
 
@@ -75,6 +85,12 @@ export default function ItemDetail() {
   const categories = useQuery({
     queryKey: ['categories'],
     queryFn: () => listCategories({ ordering: 'name' }),
+  })
+
+  const customers = useQuery({
+    queryKey: ['customers', 'item-owner-picker'],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    enabled: mode === 'edit' && form?.owner_type === 'CONSIGNMENT',
   })
 
   const currentItem = item.data
@@ -100,6 +116,10 @@ export default function ItemDetail() {
       title: payload.title,
       description: payload.description,
       category: Number(payload.category),
+      owner_type: payload.owner_type,
+      owner: payload.owner_type === 'CONSIGNMENT' ? Number(payload.owner) : null,
+      owner_asking_price: payload.owner_type === 'CONSIGNMENT' ? payload.owner_asking_price : null,
+      cost_price: payload.owner_type === 'COMPANY' ? payload.cost_price : null,
       listed_price: payload.listed_price,
       quantity: Number(payload.quantity),
       condition: payload.condition,
@@ -111,6 +131,7 @@ export default function ItemDetail() {
       void queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.setQueryData(['item', itemId], updatedItem)
       notifySuccess('Item updated')
+      setMode('view')
     },
     onError: error => notifyError(formErrorMessage(error, 'Item could not be updated.')),
   })
@@ -135,10 +156,31 @@ export default function ItemDetail() {
     onError: error => notifyError(formErrorMessage(error, 'Item could not be deleted.')),
   })
 
+  function updateField<K extends keyof DetailForm>(field: K, value: DetailForm[K]) {
+    setForm(current => {
+      if (!current) return current
+      const next = { ...current, [field]: value }
+      if (field === 'owner_type') {
+        next.owner = ''
+        next.owner_asking_price = ''
+        next.cost_price = ''
+      }
+      return next
+    })
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!form || !canEdit) return
     save.mutate(form)
+  }
+
+  function cancelEdit() {
+    if (currentItem) {
+      setForm(formFromItem(currentItem))
+      setAttributeValues(attributesToFormValues(currentItem.attributes, ATTRIBUTE_FIELDS[currentItem.category_kind]))
+    }
+    setMode('view')
   }
 
   if (!validItemId) {
@@ -166,6 +208,12 @@ export default function ItemDetail() {
     ? currentItem.owner_asking_price
     : currentItem.cost_price
 
+  const formBasePrice = form.owner_type === 'CONSIGNMENT' ? Number(form.owner_asking_price || 0) : Number(form.cost_price || 0)
+  const formListedPrice = Number(form.listed_price || 0)
+  const formMarkup = formListedPrice - formBasePrice
+
+  const isPublic = form.status === 'ACTIVE'
+
   return (
     <Layout>
       <div className="app-page">
@@ -182,9 +230,15 @@ export default function ItemDetail() {
             actions={(
               <>
                 <StatusBadge status={currentItem.status} />
-                {canEdit && currentItem.status !== 'WITHDRAWN' && (
+                {mode === 'view' && canEdit && currentItem.status !== 'WITHDRAWN' && (
                   <button type="button" onClick={() => withdraw.mutate()} disabled={withdraw.isPending} className="secondary-button" style={{ opacity: withdraw.isPending ? .7 : 1 }}>
                     {withdraw.isPending ? 'Withdrawing...' : 'Withdraw'}
+                  </button>
+                )}
+                {mode === 'view' && canEdit && (
+                  <button type="button" onClick={() => setMode('edit')} className="secondary-button">
+                    <Pencil size={16} />
+                    Edit
                   </button>
                 )}
                 <PermissionGate minRole="ADMIN">
@@ -209,51 +263,44 @@ export default function ItemDetail() {
             <SummaryCard label="Listed price" value={<MoneyDisplay value={currentItem.listed_price} />} caption="Customer-facing price" icon={<CircleDollarSign size={18} />} />
             <SummaryCard label="Available" value={`${currentItem.quantity_available}/${currentItem.quantity}`} caption={`${currentItem.quantity_sold} sold`} icon={<Package size={18} />} tone="blue" />
             <SummaryCard label={currentItem.owner_type === 'CONSIGNMENT' ? 'Owner ask' : 'Cost'} value={basePrice ? <MoneyDisplay value={basePrice} /> : '-'} caption={OWNER_TYPE_LABELS[currentItem.owner_type]} icon={<Tags size={18} />} tone="amber" />
-            <SummaryCard label="Expected profit" value={currentItem.expected_profit_per_unit ? <MoneyDisplay value={currentItem.expected_profit_per_unit} /> : '-'} caption="Per unit before sale" icon={<CircleDollarSign size={18} />} tone="primary" valueColor="var(--success)" />
+            <SummaryCard
+              label="Marketplace visibility"
+              value={currentItem.status === 'ACTIVE' ? 'Public' : 'Private'}
+              caption={currentItem.status === 'ACTIVE' ? 'Visible to shoppers' : 'Not shown publicly'}
+              icon={currentItem.status === 'ACTIVE' ? <Globe size={18} /> : <Lock size={18} />}
+              tone={currentItem.status === 'ACTIVE' ? 'primary' : 'neutral'}
+              valueColor={currentItem.status === 'ACTIVE' ? 'var(--success)' : undefined}
+            />
           </div>
 
           <div className="content-sidebar-grid">
+            {mode === 'edit' ? (
             <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
-              <FormSection icon={<Package size={18} />} title="Listing details" description={canEdit ? 'Update inventory metadata and listing state.' : 'This record is read-only for your role.'}>
+              <FormSection icon={<Package size={18} />} title="Listing details" description="Update inventory metadata and listing state.">
                 <FormGrid>
                   <FieldLabel label="Title">
-                    <input disabled={!canEdit} className="control" value={form.title} onChange={event => setForm(current => current && ({ ...current, title: event.target.value }))} style={{ width: '100%', padding: '0 12px' }} />
+                    <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                   </FieldLabel>
                   <FieldLabel label="Category">
-                    <select disabled={!canEdit} className="control" value={form.category} onChange={event => setForm(current => current && ({ ...current, category: event.target.value }))} style={{ width: '100%', padding: '0 12px' }}>
+                    <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
                       {(categories.data?.results ?? []).map(category => (
                         <option key={category.id} value={category.id}>{category.name} - {CATEGORY_KIND_LABELS[category.kind]}</option>
                       ))}
                     </select>
                   </FieldLabel>
-                  <FieldLabel label="Listed price">
-                    <span style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                      <input disabled={!canEdit} className="control" value={form.listed_price} onChange={event => setForm(current => current && ({ ...current, listed_price: event.target.value }))} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                    </span>
-                  </FieldLabel>
                   <FieldLabel label="Quantity">
-                    <input disabled={!canEdit} className="control" value={form.quantity} onChange={event => setForm(current => current && ({ ...current, quantity: event.target.value }))} inputMode="numeric" style={{ width: '100%', padding: '0 12px' }} />
+                    <input className="control" value={form.quantity} onChange={event => updateField('quantity', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px' }} />
                   </FieldLabel>
                   <FieldLabel label="Condition">
-                    <select disabled={!canEdit} className="control" value={form.condition} onChange={event => setForm(current => current && ({ ...current, condition: event.target.value as ItemCondition }))} style={{ width: '100%', padding: '0 12px' }}>
+                    <select className="control" value={form.condition} onChange={event => updateField('condition', event.target.value as ItemCondition)} style={{ width: '100%', padding: '0 12px' }}>
                       {ITEM_CONDITIONS.map(condition => (
                         <option key={condition} value={condition}>{CONDITION_LABELS[condition]}</option>
                       ))}
                     </select>
                   </FieldLabel>
                   <FieldLabel label="Location">
-                    <input disabled={!canEdit} className="control" value={form.location} onChange={event => setForm(current => current && ({ ...current, location: event.target.value }))} style={{ width: '100%', padding: '0 12px' }} />
+                    <input className="control" value={form.location} onChange={event => updateField('location', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                   </FieldLabel>
-                  <PermissionGate minRole="MANAGER">
-                    <FieldLabel label="Status">
-                      <select className="control" value={form.status} onChange={event => setForm(current => current && ({ ...current, status: event.target.value as ItemStatus }))} style={{ width: '100%', padding: '0 12px' }}>
-                        {ITEM_STATUSES.map(status => (
-                          <option key={status} value={status}>{STATUS_LABELS[status]}</option>
-                        ))}
-                      </select>
-                    </FieldLabel>
-                  </PermissionGate>
                 </FormGrid>
 
                 {attributeFields.length > 0 && (
@@ -265,14 +312,14 @@ export default function ItemDetail() {
                       {attributeFields.map(field => (
                         <FieldLabel key={field.key} label={field.label}>
                           {field.type === 'select' ? (
-                            <select disabled={!canEdit} className="control" value={attributeValues[field.key] ?? ''} onChange={event => setAttributeValues(current => ({ ...current, [field.key]: event.target.value }))} style={{ width: '100%', padding: '0 12px' }}>
+                            <select className="control" value={attributeValues[field.key] ?? ''} onChange={event => setAttributeValues(current => ({ ...current, [field.key]: event.target.value }))} style={{ width: '100%', padding: '0 12px' }}>
                               <option value="">Choose</option>
                               {(field.options ?? []).map(option => (
                                 <option key={option} value={option}>{option}</option>
                               ))}
                             </select>
                           ) : (
-                            <input disabled={!canEdit} className="control" value={attributeValues[field.key] ?? ''} onChange={event => setAttributeValues(current => ({ ...current, [field.key]: event.target.value }))} inputMode={field.type === 'number' ? 'numeric' : undefined} style={{ width: '100%', padding: '0 12px' }} />
+                            <input className="control" value={attributeValues[field.key] ?? ''} onChange={event => setAttributeValues(current => ({ ...current, [field.key]: event.target.value }))} inputMode={field.type === 'number' ? 'numeric' : undefined} style={{ width: '100%', padding: '0 12px' }} />
                           )}
                         </FieldLabel>
                       ))}
@@ -281,24 +328,123 @@ export default function ItemDetail() {
                 )}
 
                 <FieldLabel label="Description">
-                  <textarea disabled={!canEdit} className="control" value={form.description} onChange={event => setForm(current => current && ({ ...current, description: event.target.value }))} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+                  <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
                 </FieldLabel>
               </FormSection>
+
+              <FormSection icon={<Tags size={18} />} title="Ownership & pricing" description="Choose whether this is company stock or a customer consignment." tone="amber">
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <FieldLabel label="Owner type">
+                    <SegmentedControl
+                      value={form.owner_type}
+                      onChange={value => updateField('owner_type', value)}
+                      options={[
+                        { value: 'COMPANY', label: 'Company stock' },
+                        { value: 'CONSIGNMENT', label: 'Consignment' },
+                      ]}
+                    />
+                  </FieldLabel>
+
+                  <FormGrid>
+                    {form.owner_type === 'CONSIGNMENT' ? (
+                      <>
+                        <FieldLabel label="Owner">
+                          <select className="control" value={form.owner} onChange={event => updateField('owner', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+                            <option value="">Choose customer</option>
+                            {(customers.data?.results ?? []).map(customer => (
+                              <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
+                            ))}
+                            {currentItem.owner_type === 'CONSIGNMENT' && currentItem.owner && !(customers.data?.results ?? []).some(customer => customer.id === currentItem.owner) && (
+                              <option value={currentItem.owner}>{currentItem.owner_name}</option>
+                            )}
+                          </select>
+                        </FieldLabel>
+                        <FieldLabel label="Owner asking price">
+                          <span style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
+                            <input className="control" value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
+                          </span>
+                        </FieldLabel>
+                      </>
+                    ) : (
+                      <FieldLabel label="Cost price">
+                        <span style={{ position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
+                          <input className="control" value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
+                        </span>
+                      </FieldLabel>
+                    )}
+
+                    <FieldLabel label="Listed price">
+                      <span style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
+                        <input className="control" value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
+                      </span>
+                    </FieldLabel>
+                  </FormGrid>
+
+                  <div style={{ border: '1px dashed #bcd6c9', borderRadius: 14, background: '#f3f7f4', padding: 15 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-hover)', fontWeight: 700 }}>
+                      <CircleDollarSign size={17} />
+                      Expected markup
+                    </div>
+                    <div className="serif" style={{ marginTop: 7, color: formMarkup >= 0 ? 'var(--primary-hover)' : 'var(--danger)', fontSize: 26, fontWeight: 700 }}>
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(formMarkup)}
+                    </div>
+                    <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 12 }}>API values are authoritative after save.</div>
+                  </div>
+                </div>
+              </FormSection>
+
+              <PermissionGate minRole="MANAGER">
+                <FormSection icon={isPublic ? <Globe size={18} /> : <Lock size={18} />} title="Visibility" description="Control whether this listing is public on the marketplace." tone={isPublic ? 'primary' : 'neutral'}>
+                  <FieldLabel label="Status">
+                    <select className="control" value={form.status} onChange={event => updateField('status', event.target.value as ItemStatus)} style={{ width: '100%', padding: '0 12px' }}>
+                      {ITEM_STATUSES.map(status => (
+                        <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                      ))}
+                    </select>
+                  </FieldLabel>
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: isPublic ? 'var(--success)' : 'var(--muted)' }}>
+                    {isPublic ? <Globe size={16} /> : <Lock size={16} />}
+                    {isPublic ? 'Visible on the public marketplace' : 'Not visible to the public'}
+                  </div>
+                </FormSection>
+              </PermissionGate>
 
               {(save.isError || withdraw.isError || remove.isError) && (
                 <div className="error-banner">{formErrorMessage(save.error ?? withdraw.error ?? remove.error, 'Item could not be updated.')}</div>
               )}
 
-              {canEdit && (
-                <ActionFooter>
-                  <Link to="/items" className="secondary-button">Cancel</Link>
-                  <button type="submit" disabled={save.isPending} className="primary-button" style={{ opacity: save.isPending ? .7 : 1 }}>
-                    <Save size={16} />
-                    {save.isPending ? 'Saving...' : 'Save changes'}
-                  </button>
-                </ActionFooter>
-              )}
+              <ActionFooter>
+                <button type="button" onClick={cancelEdit} className="secondary-button">
+                  <X size={16} />
+                  Cancel
+                </button>
+                <button type="submit" disabled={save.isPending} className="primary-button" style={{ opacity: save.isPending ? .7 : 1 }}>
+                  <Save size={16} />
+                  {save.isPending ? 'Saving...' : 'Save changes'}
+                </button>
+              </ActionFooter>
             </form>
+            ) : (
+              <div style={{ display: 'grid', gap: 16 }}>
+                <DetailMeta
+                  title="Listing details"
+                  rows={[
+                    { label: 'Title', value: currentItem.title },
+                    { label: 'Category', value: currentItem.category_name },
+                    { label: 'Listed price', value: <MoneyDisplay value={currentItem.listed_price} /> },
+                    { label: 'Quantity', value: `${currentItem.quantity_available}/${currentItem.quantity} available (${currentItem.quantity_sold} sold)` },
+                    { label: 'Condition', value: CONDITION_LABELS[currentItem.condition] },
+                    { label: 'Location', value: currentItem.location || '-' },
+                    { label: 'Status', value: <StatusBadge status={currentItem.status} /> },
+                    ...attributeFields.map(field => ({ label: field.label, value: attributeValues[field.key] || '-' })),
+                    { label: 'Description', value: currentItem.description || '-' },
+                  ]}
+                />
+              </div>
+            )}
 
             <aside style={{ display: 'grid', gap: 16 }}>
               <DetailMeta
@@ -313,18 +459,7 @@ export default function ItemDetail() {
                 ]}
               />
 
-              <section className="card" style={{ padding: 20 }}>
-                <h2 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700 }}>Images</h2>
-                {currentItem.images.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 }}>
-                    {currentItem.images.map(image => (
-                      <img key={image.id} src={image.image} alt={currentItem.title} style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, border: '1px solid var(--border)' }} />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState icon={<ImageIcon size={18} />} title="No images uploaded." />
-                )}
-              </section>
+              <ItemImageManager itemId={itemId} images={currentItem.images} canEdit={canEdit} />
             </aside>
           </div>
         </div>

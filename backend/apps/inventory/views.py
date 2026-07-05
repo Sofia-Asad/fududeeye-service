@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -45,6 +46,25 @@ class ItemViewSet(viewsets.ModelViewSet):
         item = self.get_object()
         serializer = ItemImageSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(item=item)
+            is_first_image = not item.images.exists()
+            serializer.save(item=item, is_primary=is_first_image)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        detail=True,
+        methods=['delete'],
+        url_path=r'images/(?P<image_id>\d+)',
+        permission_classes=[IsStaffEditOwn],
+    )
+    def delete_image(self, request, pk=None, image_id=None):
+        item = self.get_object()
+        image = get_object_or_404(ItemImage, pk=image_id, item=item)
+        was_primary = image.is_primary
+        image.delete()
+        if was_primary:
+            next_image = item.images.order_by('order', 'pk').first()
+            if next_image:
+                next_image.is_primary = True
+                next_image.save(update_fields=['is_primary'])
+        return Response(status=status.HTTP_204_NO_CONTENT)

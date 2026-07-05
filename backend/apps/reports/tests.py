@@ -211,3 +211,14 @@ def test_audit_log_report_filters_by_model(client, manager_user, report_data):
     assert resp.status_code == 200
     assert resp.data['count'] == 1
     assert resp.data['results'][0]['model_name'] == 'ReportFixture'
+
+
+@pytest.mark.django_db
+def test_audit_log_report_filters_by_object_id(client, manager_user, report_data):
+    client.force_authenticate(user=manager_user)
+    resp = client.get('/api/v1/reports/audit-log/?model=ReportFixture&object_id=1')
+    assert resp.status_code == 200
+    assert resp.data['count'] == 1
+
+    empty = client.get('/api/v1/reports/audit-log/?model=ReportFixture&object_id=999')
+    assert empty.data['count'] == 0

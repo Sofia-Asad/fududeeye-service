@@ -2,11 +2,22 @@ import pytest
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from apps.customers.models import Customer
-from .models import Category, Item
+from .models import Category, Item, ItemImage
 
 User = get_user_model()
+
+
+def tiny_png(name='photo.png'):
+    # 1x1 transparent PNG
+    content = (
+        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+        b'\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01'
+        b'\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
+    )
+    return SimpleUploadedFile(name, content, content_type='image/png')
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -367,3 +378,59 @@ def test_sales_user_cannot_create_published_item(client, sales_user, category):
 
     assert resp.status_code == 400
     assert 'status' in resp.data
+
+
+# ── item images ────────────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_first_uploaded_image_becomes_primary(client, admin_user, category):
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/items/', company_payload(category))
+    item_pk = resp.data['id']
+
+    upload = client.post(f'/api/v1/items/{item_pk}/images/', {'image': tiny_png()}, format='multipart')
+    assert upload.status_code == 201
+    assert upload.data['is_primary'] is True
+
+
+@pytest.mark.django_db
+def test_second_uploaded_image_is_not_primary(client, admin_user, category):
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/items/', company_payload(category))
+    item_pk = resp.data['id']
+
+    client.post(f'/api/v1/items/{item_pk}/images/', {'image': tiny_png('a.png')}, format='multipart')
+    second = client.post(f'/api/v1/items/{item_pk}/images/', {'image': tiny_png('b.png')}, format='multipart')
+    assert second.data['is_primary'] is False
+
+
+@pytest.mark.django_db
+def test_deleting_primary_image_promotes_next_one(client, admin_user, category):
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/items/', company_payload(category))
+    item_pk = resp.data['id']
+
+    first = client.post(f'/api/v1/items/{item_pk}/images/', {'image': tiny_png('a.png')}, format='multipart')
+    second = client.post(f'/api/v1/items/{item_pk}/images/', {'image': tiny_png('b.png')}, format='multipart')
+
+    delete_resp = client.delete(f'/api/v1/items/{item_pk}/images/{first.data["id"]}/')
+    assert delete_resp.status_code == 204
+    assert not ItemImage.objects.filter(pk=first.data['id']).exists()
+
+    remaining = ItemImage.objects.get(pk=second.data['id'])
+    assert remaining.is_primary is True
+
+
+@pytest.mark.django_db
+def test_sales_user_cannot_delete_image_on_others_item(client, sales_user, category):
+    admin = User.objects.create_user(username='img_admin', password='pass', role='ADMIN')
+    c = APIClient()
+    c.default_format = 'json'
+    c.force_authenticate(user=admin)
+    created = c.post('/api/v1/items/', company_payload(category))
+    item_pk = created.data['id']
+    image = c.post(f'/api/v1/items/{item_pk}/images/', {'image': tiny_png()}, format='multipart')
+
+    client.force_authenticate(user=sales_user)
+    resp = client.delete(f'/api/v1/items/{item_pk}/images/{image.data["id"]}/')
+    assert resp.status_code == 403

@@ -14,6 +14,8 @@ import NewSale from '@/pages/NewSale'
 import Demands from '@/pages/Demands'
 import Complaints from '@/pages/Complaints'
 import ComplaintDetail from '@/pages/ComplaintDetail'
+import Inquiries from '@/pages/Inquiries'
+import InquiryDetail from '@/pages/InquiryDetail'
 import Expenses from '@/pages/Expenses'
 import ExpenseDetail from '@/pages/ExpenseDetail'
 import PendingPayouts from '@/pages/PendingPayouts'
@@ -30,6 +32,7 @@ const Reports = lazy(() => import('@/pages/Reports'))
 const SalesReport = lazy(() => import('@/pages/SalesReport'))
 const AuditLog = lazy(() => import('@/pages/AuditLog'))
 const Users = lazy(() => import('@/pages/Users'))
+const UserDetail = lazy(() => import('@/pages/UserDetail'))
 
 const queryClient = new QueryClient()
 
@@ -56,7 +59,7 @@ export default function App() {
             },
           }}
         />
-        <BrowserRouter>
+        <BrowserRouter basename="/crm">
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -73,6 +76,8 @@ export default function App() {
             <Route path="/demands/:id" element={<ProtectedRoute><DemandDetail /></ProtectedRoute>} />
             <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
             <Route path="/complaints/:id" element={<ProtectedRoute><ComplaintDetail /></ProtectedRoute>} />
+            <Route path="/inquiries" element={<ProtectedRoute><Inquiries /></ProtectedRoute>} />
+            <Route path="/inquiries/:id" element={<ProtectedRoute><InquiryDetail /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
             <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
             <Route path="/sales/payouts" element={<ProtectedRoute><PendingPayouts /></ProtectedRoute>} />
@@ -82,6 +87,7 @@ export default function App() {
             <Route path="/reports/profit" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><ProfitReport /></Suspense></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><AuditLog /></Suspense></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Users /></Suspense></ProtectedRoute>} />
+            <Route path="/users/:id" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><UserDetail /></Suspense></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

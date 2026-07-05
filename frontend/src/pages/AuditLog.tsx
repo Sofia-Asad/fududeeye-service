@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Filter, RotateCcw, ShieldCheck, UserCheck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 
@@ -57,11 +58,17 @@ function ActionBadge({ action }: { action: AuditAction }) {
   )
 }
 
+const EARLIEST_DATE = '2000-01-01'
+
 export default function AuditLog() {
   const { user } = useAuth()
-  const [modelFilter, setModelFilter] = useState('')
+  const [searchParams] = useSearchParams()
+  const initialObjectId = searchParams.get('object_id')
+  const [modelFilter, setModelFilter] = useState(searchParams.get('model') ?? '')
+  const [objectIdFilter, setObjectIdFilter] = useState(initialObjectId)
   const [action, setAction] = useState<ActionFilter>('all')
-  const [startDate, setStartDate] = useState(weekStartISO())
+  // A record-history deep-link should show that record's full history, not just the last week.
+  const [startDate, setStartDate] = useState(initialObjectId ? EARLIEST_DATE : weekStartISO())
   const [endDate, setEndDate] = useState(todayISO())
   const [userFilter, setUserFilter] = useState<number | null>(null)
   const enabled = !!user?.can_view_finance
@@ -73,9 +80,10 @@ export default function AuditLog() {
   })
 
   const audit = useQuery({
-    queryKey: ['audit-log', modelFilter, action, startDate, endDate, userFilter],
+    queryKey: ['audit-log', modelFilter, objectIdFilter, action, startDate, endDate, userFilter],
     queryFn: () => getAuditLogReport({
       model: modelFilter.trim() || undefined,
+      object_id: objectIdFilter ?? undefined,
       action: action === 'all' ? undefined : action,
       start: startDate || undefined,
       end: endDate || undefined,
@@ -168,13 +176,25 @@ export default function AuditLog() {
                   <Filter size={16} />
                   Filter
                 </button>
-                <button type="button" className="secondary-button" onClick={() => { setModelFilter(''); setAction('all'); setStartDate(weekStartISO()); setEndDate(todayISO()); setUserFilter(null) }}>
+                <button type="button" className="secondary-button" onClick={() => { setModelFilter(''); setObjectIdFilter(null); setAction('all'); setStartDate(weekStartISO()); setEndDate(todayISO()); setUserFilter(null) }}>
                   <RotateCcw size={16} />
                   Reset
                 </button>
               </DirectoryToolbar>
             )}
           >
+            {objectIdFilter && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 18px 14px', padding: '8px 12px', borderRadius: 10, background: 'var(--primary-soft)', color: 'var(--primary-hover)', fontSize: 12.5, fontWeight: 600 }}>
+                Showing full history for {modelFilter || 'record'} #{objectIdFilter}
+                <button
+                  type="button"
+                  onClick={() => { setObjectIdFilter(null); setStartDate(weekStartISO()) }}
+                  style={{ marginLeft: 'auto', color: 'inherit', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             {audit.isLoading && <DirectorySkeleton />}
             {audit.isError && <div className="error-banner" style={{ margin: '0 18px 18px' }}>{errorMessage(audit.error)}</div>}
             {audit.data && (

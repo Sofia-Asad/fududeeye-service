@@ -49,19 +49,27 @@ export function FieldLabel({
 
 export function Field({
   label,
+  required,
   error,
+  helper,
   name,
   children,
 }: {
   label: string
+  required?: boolean
   error?: string
+  helper?: ReactNode
   name?: string
   children: ReactNode
 }) {
   return (
     <label className="field-label" data-error={!!error} data-field={name}>
-      <span className="field-title">{label}</span>
+      <span className="field-title">
+        {label}
+        {required && <span className="field-required">*</span>}
+      </span>
       {children}
+      {helper && !error && <span className="field-helper">{helper}</span>}
       {error && <span className="field-error">{error}</span>}
     </label>
   )

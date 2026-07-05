@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { CreditCard, Filter, FolderPlus, Plus, ReceiptText, RotateCcw, Tags, X } from 'lucide-react'
+import { CreditCard, Filter, FolderPlus, Plus, ReceiptText, RotateCcw, Tags } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, Se
 import EmptyState from '@/components/EmptyState'
 import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
+import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
@@ -337,90 +338,79 @@ export default function Expenses() {
         </div>
       </PermissionGate>
 
-      {expenseModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setExpenseModalOpen(false)}>
-          <form ref={expenseFormRef} onSubmit={submitExpense} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
-              <div>
-                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New expense</h2>
-                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Record an operating cost.</p>
-              </div>
-              <button type="button" onClick={() => setExpenseModalOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
-                <X size={16} />
-              </button>
-            </div>
-            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Category" error={expenseErrors.category} name="category">
-                <select autoFocus className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-                  <option value="">Choose category</option>
-                  {(categories.data?.results ?? []).map(row => (
-                    <option key={row.id} value={row.id}>{row.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <div className="modal-grid-3" style={{ gap: 14 }}>
-                <Field label="Amount" error={expenseErrors.amount} name="amount">
-                  <input className="control" value={expenseForm.amount} onChange={event => updateExpenseField('amount', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
-                </Field>
-                <Field label="Date" error={expenseErrors.expense_date} name="expense_date">
-                  <input className="control" type="date" value={expenseForm.expense_date} onChange={event => updateExpenseField('expense_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-                </Field>
-                <Field label="Payment" name="payment_method">
-                  <select className="control" value={expenseForm.payment_method} onChange={event => updateExpenseField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
-                    {PAYMENT_METHODS.map(method => (
-                      <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-              <Field label="Description" error={expenseErrors.description} name="description">
-                <textarea className="control" value={expenseForm.description} onChange={event => updateExpenseField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-              <Field label="Notes" name="notes">
-                <textarea className="control" value={expenseForm.notes} onChange={event => updateExpenseField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-              {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
-              <button type="button" onClick={() => setExpenseModalOpen(false)} className="secondary-button">Cancel</button>
-              <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
-                {create.isPending ? 'Saving...' : 'Save expense'}
-              </button>
-            </div>
-          </form>
+      <Modal
+        open={expenseModalOpen}
+        onClose={() => setExpenseModalOpen(false)}
+        title="New expense"
+        description="Record an operating cost."
+        formRef={expenseFormRef}
+        onSubmit={submitExpense}
+        footer={(
+          <>
+            <button type="button" onClick={() => setExpenseModalOpen(false)} className="secondary-button">Cancel</button>
+            <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
+              {create.isPending ? 'Saving...' : 'Save expense'}
+            </button>
+          </>
+        )}
+      >
+        <Field label="Category" required error={expenseErrors.category} name="category">
+          <select autoFocus className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+            <option value="">Choose category</option>
+            {(categories.data?.results ?? []).map(row => (
+              <option key={row.id} value={row.id}>{row.name}</option>
+            ))}
+          </select>
+        </Field>
+        <div className="modal-grid-3" style={{ gap: 14 }}>
+          <Field label="Amount" required error={expenseErrors.amount} name="amount">
+            <input className="control" value={expenseForm.amount} onChange={event => updateExpenseField('amount', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <Field label="Date" required error={expenseErrors.expense_date} name="expense_date">
+            <input className="control" type="date" value={expenseForm.expense_date} onChange={event => updateExpenseField('expense_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <Field label="Payment" name="payment_method">
+            <select className="control" value={expenseForm.payment_method} onChange={event => updateExpenseField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
+              {PAYMENT_METHODS.map(method => (
+                <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
+              ))}
+            </select>
+          </Field>
         </div>
-      )}
+        <Field label="Description" required error={expenseErrors.description} name="description">
+          <textarea className="control" value={expenseForm.description} onChange={event => updateExpenseField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+        </Field>
+        <Field label="Notes" name="notes">
+          <textarea className="control" value={expenseForm.notes} onChange={event => updateExpenseField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+        </Field>
+        {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
+      </Modal>
 
-      {categoryModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setCategoryModalOpen(false)}>
-          <form ref={categoryFormRef} onSubmit={submitCategory} className="card" style={{ width: 'min(440px, 100%)', overflow: 'hidden' }} onClick={event => event.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
-              <div>
-                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New category</h2>
-                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Organize expense reporting.</p>
-              </div>
-              <button type="button" onClick={() => setCategoryModalOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
-                <X size={16} />
-              </button>
-            </div>
-            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Name" error={categoryErrors.name} name="name">
-                <input autoFocus className="control" value={categoryForm.name} onChange={event => updateCategoryField('name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-              </Field>
-              <Field label="Description" name="description">
-                <textarea className="control" value={categoryForm.description} onChange={event => updateCategoryField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-              {createCategory.isError && <div className="error-banner">{errorMessage(createCategory.error)}</div>}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
-              <button type="button" onClick={() => setCategoryModalOpen(false)} className="secondary-button">Cancel</button>
-              <button type="submit" disabled={createCategory.isPending} className="primary-button" style={{ opacity: createCategory.isPending ? .7 : 1 }}>
-                {createCategory.isPending ? 'Saving...' : 'Save category'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        title="New category"
+        description="Organize expense reporting."
+        width={440}
+        formRef={categoryFormRef}
+        onSubmit={submitCategory}
+        footer={(
+          <>
+            <button type="button" onClick={() => setCategoryModalOpen(false)} className="secondary-button">Cancel</button>
+            <button type="submit" disabled={createCategory.isPending} className="primary-button" style={{ opacity: createCategory.isPending ? .7 : 1 }}>
+              {createCategory.isPending ? 'Saving...' : 'Save category'}
+            </button>
+          </>
+        )}
+      >
+        <Field label="Name" required error={categoryErrors.name} name="name">
+          <input autoFocus className="control" value={categoryForm.name} onChange={event => updateCategoryField('name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+        </Field>
+        <Field label="Description" name="description">
+          <textarea className="control" value={categoryForm.description} onChange={event => updateCategoryField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+        </Field>
+        {createCategory.isError && <div className="error-banner">{errorMessage(createCategory.error)}</div>}
+      </Modal>
     </Layout>
   )
 }

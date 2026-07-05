@@ -9,6 +9,7 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  MessageCircleQuestion,
   MessageSquareWarning,
   MoreHorizontal,
   Package,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { listInquiries } from '@/api/inquiries'
 import { listComplaints, listDemands } from '@/api/service'
 import { useAuth } from '@/auth/AuthContext'
 import type { Role } from '@/types/auth'
@@ -155,6 +157,12 @@ export default function Layout({ children }: { children: ReactNode }) {
     enabled: !!user,
     staleTime: 60_000,
   })
+  const inquiryCount = useQuery({
+    queryKey: ['layout-new-inquiries-count'],
+    queryFn: () => listInquiries({ status: 'NEW', page: 1 }),
+    enabled: !!user,
+    staleTime: 60_000,
+  })
 
   const groups: NavGroup[] = [
     {
@@ -180,6 +188,13 @@ export default function Layout({ children }: { children: ReactNode }) {
           icon: MessageSquareWarning,
           badge: complaintCount.data?.count,
           badgeTone: 'danger',
+        },
+        {
+          to: '/inquiries',
+          label: 'Inquiries',
+          icon: MessageCircleQuestion,
+          badge: inquiryCount.data?.count,
+          badgeTone: 'primary',
         },
       ],
     },

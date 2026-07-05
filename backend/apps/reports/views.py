@@ -304,6 +304,8 @@ def audit_log(request):
         logs = logs.filter(user_id=user)
     if model := request.query_params.get('model'):
         logs = logs.filter(model_name=model)
+    if object_id := request.query_params.get('object_id'):
+        logs = logs.filter(object_id=object_id)
     if action := request.query_params.get('action'):
         logs = logs.filter(action=action)
     if start := parse_date(request.query_params.get('start') or ''):

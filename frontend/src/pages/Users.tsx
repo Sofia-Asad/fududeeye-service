@@ -1,20 +1,26 @@
-import { useEffect, useState } from 'react'
-import { Filter, ShieldCheck, UserCog, UsersRound } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { Filter, Plus, ShieldCheck, UserCog, UsersRound } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
 
-import { listUsers } from '@/api/accounts'
+import { createUser, listUsers } from '@/api/accounts'
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import EmptyState from '@/components/EmptyState'
+import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
+import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import PermissionGate from '@/components/PermissionGate'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
-import { errorMessage } from '@/lib/errors'
+import { formErrorMessage, errorMessage } from '@/lib/errors'
 import { initials } from '@/lib/sales'
+import { notifyError, notifySuccess } from '@/lib/toast'
+import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Role, User } from '@/types/auth'
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -23,6 +29,8 @@ const ROLE_LABELS: Record<Role, string> = {
   SALES: 'Sales',
 }
 
+const ROLES: Role[] = ['SALES', 'MANAGER', 'ADMIN']
+
 const ROLE_STYLES: Record<Role, { bg: string; fg: string }> = {
   ADMIN: { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
   MANAGER: { bg: 'var(--info-bg)', fg: 'var(--info)' },
@@ -30,6 +38,28 @@ const ROLE_STYLES: Record<Role, { bg: string; fg: string }> = {
 }
 
 const adminUsersUrl = `${new URL(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1').origin}/admin/accounts/user/`
+
+const createUserSchema = z.object({
+  username: z.string().trim().min(3, 'Username must be at least 3 characters.'),
+  password: z.string().min(8, 'Password must be at least 8 characters.'),
+  first_name: z.string().trim(),
+  last_name: z.string().trim(),
+  email: z.string().trim().email('Enter a valid email.').optional().or(z.literal('')),
+  phone: z.string().trim(),
+  role: z.enum(['ADMIN', 'MANAGER', 'SALES']),
+})
+
+type CreateUserForm = z.infer<typeof createUserSchema>
+
+const emptyForm: CreateUserForm = {
+  username: '',
+  password: '',
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  role: 'SALES',
+}
 
 function fullName(user: User) {
   return [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username
@@ -46,9 +76,16 @@ function RoleBadge({ role }: { role: Role }) {
 
 export default function Users() {
   const { user: currentUser } = useAuth()
+  const queryClient = useQueryClient()
+  const formRef = useRef<HTMLFormElement>(null)
   const [search, setSearch] = useState('')
   const [ordering, setOrdering] = useState('username')
   const [currentPage, setCurrentPage] = useState(1)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState<CreateUserForm>(emptyForm)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useFocusFirstError(errors, formRef)
 
   useEffect(() => {
     setCurrentPage(1)
@@ -63,6 +100,41 @@ export default function Users() {
     }),
     enabled: !!currentUser?.is_admin,
   })
+
+  const create = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      setModalOpen(false)
+      setForm(emptyForm)
+      setErrors({})
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+      notifySuccess('User created')
+    },
+    onError: error => notifyError(formErrorMessage(error, 'User could not be created.')),
+  })
+
+  function updateField<K extends keyof CreateUserForm>(field: K, value: CreateUserForm[K]) {
+    setForm(current => ({ ...current, [field]: value }))
+    setErrors(current => ({ ...current, [field]: '' }))
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const parsed = createUserSchema.safeParse(form)
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error))
+      return
+    }
+    create.mutate({
+      username: parsed.data.username,
+      password: parsed.data.password,
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      role: parsed.data.role,
+    })
+  }
 
   const rows = users.data?.results ?? []
   const stats = {
@@ -79,7 +151,7 @@ export default function Users() {
       render: user => {
         const name = fullName(user)
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link to={`/users/${user.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'inherit', textDecoration: 'none' }}>
             <div style={{ width: 38, height: 38, borderRadius: 999, background: user.role === 'ADMIN' ? 'var(--warning-bg)' : 'var(--primary-soft)', color: user.role === 'ADMIN' ? 'var(--warning)' : 'var(--primary-hover)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
               {initials(name)}
             </div>
@@ -87,7 +159,7 @@ export default function Users() {
               <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 700 }}>{name}</div>
               <div style={{ color: 'var(--muted)', fontSize: 12 }}>@{user.username}</div>
             </div>
-          </div>
+          </Link>
         )
       },
     },
@@ -119,12 +191,18 @@ export default function Users() {
           <PageHeader
             eyebrow="Insights"
             title="Users"
-            subtitle="Read-only staff directory; manage accounts in Django admin."
+            subtitle="Staff directory — create accounts, edit roles, and reset passwords."
             actions={(
-              <a href={adminUsersUrl} className="secondary-button">
-                <ShieldCheck size={16} />
-                Django admin
-              </a>
+              <>
+                <a href={adminUsersUrl} className="secondary-button">
+                  <ShieldCheck size={16} />
+                  Django admin
+                </a>
+                <button type="button" onClick={() => setModalOpen(true)} className="primary-button">
+                  <Plus size={16} />
+                  New user
+                </button>
+              </>
             )}
           />
 
@@ -177,6 +255,58 @@ export default function Users() {
           </DirectoryCard>
         </div>
       </PermissionGate>
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="New user"
+        description="Create a staff account."
+        width={520}
+        formRef={formRef}
+        onSubmit={submit}
+        footer={(
+          <>
+            <button type="button" onClick={() => setModalOpen(false)} className="secondary-button">Cancel</button>
+            <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
+              {create.isPending ? 'Saving...' : 'Create user'}
+            </button>
+          </>
+        )}
+      >
+        <div className="modal-grid-2" style={{ gap: 14 }}>
+          <Field label="Username" required error={errors.username} name="username">
+            <input autoFocus className="control" value={form.username} onChange={event => updateField('username', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <Field label="Password" required error={errors.password} name="password">
+            <input className="control" type="password" value={form.password} onChange={event => updateField('password', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+        </div>
+        <div className="modal-grid-2" style={{ gap: 14 }}>
+          <Field label="First name" name="first_name">
+            <input className="control" value={form.first_name} onChange={event => updateField('first_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <Field label="Last name" name="last_name">
+            <input className="control" value={form.last_name} onChange={event => updateField('last_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+        </div>
+        <div className="modal-grid-2" style={{ gap: 14 }}>
+          <Field label="Email" error={errors.email} name="email">
+            <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <Field label="Phone" name="phone">
+            <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+        </div>
+        <Field label="Role" name="role">
+          <select className="control" value={form.role} onChange={event => updateField('role', event.target.value as Role)} style={{ width: '100%', padding: '0 12px' }}>
+            {ROLES.map(role => (
+              <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+            ))}
+          </select>
+        </Field>
+
+        {create.isError && <div className="error-banner">{formErrorMessage(create.error, 'User could not be created.')}</div>}
+      </Modal>
     </Layout>
   )
 }

@@ -11,7 +11,7 @@ export function SearchBox({
   placeholder?: string
 }) {
   return (
-    <label style={{ position: 'relative', display: 'block', minWidth: 220, flex: 1.6 }}>
+    <label className="directory-search" style={{ position: 'relative', display: 'block' }}>
       <Search size={16} style={{ position: 'absolute', left: 13, top: 14, color: 'var(--muted)' }} />
       <input
         className="control"
@@ -41,7 +41,7 @@ export function DirectorySelect({
       value={value}
       onChange={event => onChange(event.target.value)}
       aria-label={ariaLabel}
-      style={{ minWidth: 150, padding: '0 12px' }}
+      style={{ padding: '0 12px' }}
     >
       {children}
     </select>
@@ -50,15 +50,7 @@ export function DirectorySelect({
 
 export function DirectoryToolbar({ children }: { children: ReactNode }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        flexWrap: 'wrap',
-        padding: '0 18px 16px',
-      }}
-    >
+    <div className="directory-toolbar">
       {children}
     </div>
   )
