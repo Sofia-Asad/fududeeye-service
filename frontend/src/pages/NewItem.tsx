@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CircleDollarSign, Package, Save, Tags } from 'lucide-react'
+import { ArrowLeft, CircleDollarSign, Globe, Lock, Package, Save, Tags } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -197,14 +197,6 @@ export default function NewItem() {
                 <FieldLabel label="Location">
                   <input className="control" value={form.location} onChange={event => updateField('location', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
-                <PermissionGate minRole="MANAGER">
-                  <FieldLabel label="Initial status">
-                    <select className="control" value={form.status} onChange={event => updateField('status', event.target.value as 'DRAFT' | 'ACTIVE')} style={{ width: '100%', padding: '0 12px' }}>
-                      <option value="DRAFT">Draft</option>
-                      <option value="ACTIVE">Active</option>
-                    </select>
-                  </FieldLabel>
-                </PermissionGate>
               </FormGrid>
               <FieldLabel label="Description" helper="Optional customer-facing notes for this item.">
                 <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
@@ -272,6 +264,32 @@ export default function NewItem() {
               </div>
             </FormSection>
 
+            <PermissionGate minRole="MANAGER" fallback={(
+              <FormSection icon={<Lock size={18} />} title="Visibility" description="Sales staff submit as Draft — a Manager or Admin can publish it." tone="neutral">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
+                  <Lock size={16} />
+                  Saved as Draft — not visible to the public
+                </div>
+              </FormSection>
+            )}>
+              <FormSection icon={form.status === 'ACTIVE' ? <Globe size={18} /> : <Lock size={18} />} title="Visibility" description="Control whether this listing is public on the marketplace." tone={form.status === 'ACTIVE' ? 'primary' : 'neutral'}>
+                <FieldLabel label="Publish status">
+                  <SegmentedControl
+                    value={form.status}
+                    onChange={value => updateField('status', value)}
+                    options={[
+                      { value: 'DRAFT', label: 'Save as Draft' },
+                      { value: 'ACTIVE', label: 'Publish Now' },
+                    ]}
+                  />
+                </FieldLabel>
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: form.status === 'ACTIVE' ? 'var(--success)' : 'var(--muted)' }}>
+                  {form.status === 'ACTIVE' ? <Globe size={16} /> : <Lock size={16} />}
+                  {form.status === 'ACTIVE' ? 'Will be visible on the public marketplace immediately' : 'Kept private until you publish it'}
+                </div>
+              </FormSection>
+            </PermissionGate>
+
             {attributeFields.length > 0 && (
               <FormSection icon={<Tags size={18} />} title={`${selectedCategory ? CATEGORY_KIND_LABELS[selectedCategory.kind] : ''} fields`} description="Category-specific attributes improve matching and filtering." tone="blue">
                 <FormGrid>
@@ -295,7 +313,14 @@ export default function NewItem() {
 
             {create.isError && <div className="error-banner">{formErrorMessage(create.error, 'Item could not be saved.')}</div>}
 
-            <ActionFooter note="Sales role can only submit as Draft">
+            <ActionFooter
+              note={(
+                <>
+                  {!canManageInventory && 'Sales role can only submit as Draft. '}
+                  You can add photos on the next screen once this item is created.
+                </>
+              )}
+            >
               <Link to="/items" className="secondary-button">Cancel</Link>
               <button type="submit" disabled={create.isPending || categories.isLoading} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
                 <Save size={16} />

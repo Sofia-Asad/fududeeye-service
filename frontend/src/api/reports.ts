@@ -32,6 +32,7 @@ export interface ExpenseReportParams {
 export interface AuditLogParams {
   user?: number
   model?: string
+  object_id?: string
   action?: AuditAction
   start?: string
   end?: string

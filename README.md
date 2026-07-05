@@ -23,7 +23,8 @@ complaints, expenses, and dashboard reports.
     - [5.6 `demands.Demand`](#56-demandsdemand)
     - [5.7 `complaints.Complaint`](#57-complaintscomplaint)
     - [5.8 `finance`](#58-finance)
-    - [5.9 ER diagram](#59-er-diagram)
+    - [5.9 `marketplace`](#59-marketplace)
+    - [5.10 ER diagram](#510-er-diagram)
   - [6. Roles and permissions](#6-roles-and-permissions)
   - [7. Item status workflow](#7-item-status-workflow)
   - [8. Reports](#8-reports)
@@ -176,6 +177,7 @@ No Redux. No Next.js. No new state libraries or CSS frameworks.
 | `complaints`  | `Complaint`                                           | ticket number `TKT-00001`, status workflow, priority, assignment                                       |
 | `finance`     | `ExpenseCategory`, `Expense`                          | expenses with category, amount, payment method, receipt image                                          |
 | `reports`     | (none — views only)                                   | dashboard KPIs, sales/profit/expense reports, pending payouts, demand/supply, audit log                |
+| `marketplace` | `Inquiry`                                             | public-facing surface for the marketplace site (`marketplace/`): read-only `AllowAny` browsing of `Category`/`Item` (ACTIVE only, internal pricing/owner stripped), plus anonymous lead capture (`Inquiry`) for per-item contact and "what do you need" requests. Staff manage leads via the same `/inquiries/` endpoint (auth required for list/update/delete) |
 
 Payment methods supported throughout: Cash, EVC Plus, Zaad, Bank Transfer, Other.
 
@@ -298,7 +300,41 @@ Just `name`, `description`, `is_active`.
 **`Expense`** (AuditedModel) — `category`, `amount`, `expense_date`,
 `payment_method`, `description`, optional `receipt` image, `notes`.
 
-### 5.9 ER diagram
+### 5.9 `marketplace`
+
+Backend surface for the public marketplace site (`marketplace/`, a separate
+frontend from the CRM). Anonymous visitors browse and submit leads with no
+account; only staff (existing `accounts.User`) ever log in, via the CRM.
+
+**`Inquiry`** (`TimestampedModel`, not `AuditedModel` — submitted by anonymous
+public visitors, not staff, so there is no `created_by`/`updated_by`).
+- `kind` ∈ `ITEM_INTEREST | ITEM_REQUEST`
+- `full_name`, `phone`, `email` (optional), `message` (optional for
+  ITEM_INTEREST, required for ITEM_REQUEST)
+- `item` (FK `inventory.Item`, `SET_NULL`) — required for ITEM_INTEREST; must
+  be `ACTIVE` at submission time
+- `category` (FK `inventory.Category`, `SET_NULL`) — optional hint for
+  ITEM_REQUEST
+- `status` ∈ `NEW | CONTACTED | CLOSED`, default `NEW`
+- `handled_by` (FK `accounts.User`, `SET_NULL`), `staff_notes`
+
+Public endpoints (`AllowAny`, no CSRF needed since there is no authenticated
+session on anonymous requests):
+- `GET /api/v1/public/categories/`, `GET /api/v1/public/items/` (+ detail) —
+  read-only, `Item.status=ACTIVE` only, serialized without `cost_price`,
+  `owner_asking_price`, or `owner` (see `PublicItemSerializer`).
+- `POST /api/v1/inquiries/` — anonymous lead capture (the per-item "Contact
+  Seller" form and the homepage "What Do You Need?" form both post here with
+  a different `kind`).
+
+Staff-only (`IsAuthenticated`, `DenyDeleteUnlessAdmin` on delete):
+- `GET/PATCH/DELETE /api/v1/inquiries/{id}/`, `GET /api/v1/inquiries/` — same
+  endpoint, different serializer (`InquirySerializer`) and permission based
+  on `action`. Staff triage leads here and manually create a real `Customer`
+  / `Sale` / `Demand` if one turns into a real transaction — `Inquiry` never
+  auto-creates those.
+
+### 5.10 ER diagram
 
 ```mermaid
 erDiagram
@@ -764,9 +800,15 @@ Remove an entry once it is fixed; add new entries as they are discovered.
 
 Reserved design space — do not build yet, but don't paint into a corner:
 
-- **Public marketplace site** where outside sellers register and buyers browse.
-  Will reuse Customer, Item, Category. Will add models like `ItemReview`,
-  `ItemFavorite`, `ExternalSellerAccount`.
+- **Public marketplace site** (`marketplace/` + `apps.marketplace`, §5.9) —
+  ✅ started. Correction to the original plan below: there are **no public
+  accounts**. Visitors browse anonymously (reusing `Item`/`Category`
+  read-only) and reach out via WhatsApp or the `Inquiry` lead-capture
+  endpoint; only staff log in, and only into the CRM. Still open: a real
+  `frontend/`-side "Inquiries" page for staff to triage leads (`Inquiry` rows
+  are currently only visible via Django admin and the raw API), and
+  converting a qualified `Inquiry` into a real `Customer`/`Sale`/`Demand` is
+  still a manual staff action, not automated.
 - **Notifications** — email + SMS to buyers/sellers/staff.
 - **Somali language toggle** — typography and layout should accommodate slightly
   longer translated strings.

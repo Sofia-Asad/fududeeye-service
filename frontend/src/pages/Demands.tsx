@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ClipboardList, Filter, PackageCheck, Plus, Target, X } from 'lucide-react'
+import { ClipboardList, Filter, PackageCheck, Plus, Target } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -12,6 +12,7 @@ import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, Se
 import EmptyState from '@/components/EmptyState'
 import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
+import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
@@ -259,71 +260,63 @@ export default function Demands() {
         </DirectoryCard>
       </div>
 
-      {modalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setModalOpen(false)}>
-          <form ref={formRef} onSubmit={submit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
-              <div>
-                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>New demand</h2>
-                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Create a customer request.</p>
-              </div>
-              <button type="button" onClick={() => setModalOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
-                <X size={16} />
-              </button>
-            </div>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="New demand"
+        description="Create a customer request."
+        formRef={formRef}
+        onSubmit={submit}
+        footer={(
+          <>
+            <button type="button" onClick={() => setModalOpen(false)} className="secondary-button">Cancel</button>
+            <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
+              {create.isPending ? 'Saving...' : 'Create demand'}
+            </button>
+          </>
+        )}
+      >
+        <Field label="Customer" required error={errors.customer} name="customer">
+          <select autoFocus className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+            <option value="">Choose customer</option>
+            {(customers.data?.results ?? []).map(customer => (
+              <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
+            ))}
+          </select>
+        </Field>
 
-            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Customer" error={errors.customer} name="customer">
-                <select autoFocus className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-                  <option value="">Choose customer</option>
-                  {(customers.data?.results ?? []).map(customer => (
-                    <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
-                  ))}
-                </select>
-              </Field>
+        <Field label="Title" required error={errors.title} name="title">
+          <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+        </Field>
 
-              <Field label="Title" error={errors.title} name="title">
-                <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-              </Field>
+        <Field label="Category" name="category">
+          <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+            <option value="">Any category</option>
+            {(categories.data?.results ?? []).map(nextCategory => (
+              <option key={nextCategory.id} value={nextCategory.id}>{nextCategory.name}</option>
+            ))}
+          </select>
+        </Field>
 
-              <Field label="Category" name="category">
-                <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-                  <option value="">Any category</option>
-                  {(categories.data?.results ?? []).map(nextCategory => (
-                    <option key={nextCategory.id} value={nextCategory.id}>{nextCategory.name}</option>
-                  ))}
-                </select>
-              </Field>
-
-              <div className="modal-grid-2" style={{ gap: 14 }}>
-                <Field label="Target min" error={errors.target_price_min} name="target_price_min">
-                  <input className="control" value={form.target_price_min} onChange={event => updateField('target_price_min', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
-                </Field>
-                <Field label="Target max" error={errors.target_price_max} name="target_price_max">
-                  <input className="control" value={form.target_price_max} onChange={event => updateField('target_price_max', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
-                </Field>
-              </div>
-
-              <Field label="Description" name="description">
-                <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-
-              <Field label="Notes" name="notes">
-                <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-
-              {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
-              <button type="button" onClick={() => setModalOpen(false)} className="secondary-button">Cancel</button>
-              <button type="submit" disabled={create.isPending} className="primary-button" style={{ opacity: create.isPending ? .7 : 1 }}>
-                {create.isPending ? 'Saving...' : 'Create demand'}
-              </button>
-            </div>
-          </form>
+        <div className="modal-grid-2" style={{ gap: 14 }}>
+          <Field label="Target min" error={errors.target_price_min} name="target_price_min">
+            <input className="control" value={form.target_price_min} onChange={event => updateField('target_price_min', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <Field label="Target max" error={errors.target_price_max} name="target_price_max">
+            <input className="control" value={form.target_price_max} onChange={event => updateField('target_price_max', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
         </div>
-      )}
+
+        <Field label="Description" name="description">
+          <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+        </Field>
+
+        <Field label="Notes" name="notes">
+          <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+        </Field>
+
+        {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
+      </Modal>
     </Layout>
   )
 }
