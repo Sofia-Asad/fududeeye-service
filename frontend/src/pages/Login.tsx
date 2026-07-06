@@ -3,9 +3,10 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import type { Location } from 'react-router-dom'
 import { AxiosError } from 'axios'
-import { Eye, Lock, ShieldCheck, Store, UserRound } from 'lucide-react'
+import { Eye, Lock, ShieldCheck, UserRound } from 'lucide-react'
 
 import { useAuth } from '@/auth/AuthContext'
+import Logo from '@/components/Logo'
 
 export default function Login() {
   const { user, login } = useAuth()
@@ -43,10 +44,10 @@ export default function Login() {
   return (
     <main className="login-shell">
       <section className="login-brand">
+        <span className="login-brand-glow" aria-hidden="true" style={{ top: -90, right: -70, width: 260, height: 260, background: 'rgba(242,183,5,.18)' }} />
+        <span className="login-brand-glow" aria-hidden="true" style={{ bottom: -110, left: -80, width: 240, height: 240, background: 'rgba(255,255,255,.06)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.18)' }}>
-            <Store size={22} />
-          </div>
+          <Logo size={44} />
           <div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>Fududeeye</div>
             <div style={{ marginTop: 3, fontSize: 10.5, fontWeight: 700, letterSpacing: '.16em', color: 'rgba(255,255,255,.62)' }}>BROKERAGE CRM</div>

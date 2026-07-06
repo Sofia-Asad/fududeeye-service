@@ -1,11 +1,11 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, UserPlus } from 'lucide-react'
+import { ArrowLeft, Mail, MapPin, Phone, Save, Smartphone, UserPlus } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 
 import { createCustomer } from '@/api/customers'
 import ActionFooter from '@/components/ActionFooter'
-import FormSection, { FieldLabel, FormGrid } from '@/components/FormSection'
+import FormSection, { FieldLabel, FormGrid, IconInput } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import { emptyCustomerForm, customerSchema, type CustomerFormValues } from '@/lib/customerSchema'
@@ -74,18 +74,23 @@ export default function NewCustomer() {
                   <input className="control" value={form.full_name} onChange={event => updateField('full_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
                 </FieldLabel>
                 <FieldLabel label="Phone" required error={errors.phone} name="phone">
-                  <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                  <IconInput icon={<Phone size={15} />} value={form.phone} onChange={event => updateField('phone', event.target.value)} />
                 </FieldLabel>
                 <FieldLabel label="Alternate phone" error={errors.alternate_phone} name="alternate_phone">
-                  <input className="control" value={form.alternate_phone} onChange={event => updateField('alternate_phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                  <IconInput icon={<Smartphone size={15} />} value={form.alternate_phone} onChange={event => updateField('alternate_phone', event.target.value)} />
                 </FieldLabel>
                 <FieldLabel label="Email" error={errors.email} name="email">
-                  <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+                  <IconInput icon={<Mail size={15} />} type="email" value={form.email} onChange={event => updateField('email', event.target.value)} />
                 </FieldLabel>
               </FormGrid>
 
               <FieldLabel label="Address" error={errors.address} name="address">
-                <textarea className="control" value={form.address} onChange={event => updateField('address', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+                <span style={{ position: 'relative', display: 'block' }}>
+                  <span style={{ position: 'absolute', left: 13, top: 12, color: 'var(--muted)', pointerEvents: 'none' }}>
+                    <MapPin size={15} />
+                  </span>
+                  <textarea className="control" value={form.address} onChange={event => updateField('address', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: '11px 12px 11px 38px', resize: 'vertical' }} />
+                </span>
               </FieldLabel>
 
               <FieldLabel label="Notes" error={errors.notes} name="notes">

@@ -34,6 +34,7 @@ export default function StatusBadge({ status }: { status: string }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        gap: 6,
         fontSize: 11.5,
         fontWeight: 600,
         padding: '3px 11px',
@@ -44,6 +45,7 @@ export default function StatusBadge({ status }: { status: string }) {
         whiteSpace: 'nowrap',
       }}
     >
+      <span style={{ width: 5, height: 5, flexShrink: 0, borderRadius: 999, background: 'currentColor' }} />
       {label}
     </span>
   )

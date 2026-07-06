@@ -22,7 +22,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   const primaryImage = listing.images.find(image => image.isPrimary) ?? listing.images[0]
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+    <article className="group flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-border-strong hover:shadow-lg">
       <div className="relative aspect-[4/3] overflow-hidden bg-primary-soft">
         {primaryImage ? (
           <img

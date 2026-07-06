@@ -9,7 +9,7 @@ import { listItems } from '@/api/inventory'
 import { createSale } from '@/api/sales'
 import { useAuth } from '@/auth/AuthContext'
 import ActionFooter from '@/components/ActionFooter'
-import FormSection, { FieldLabel, FormGrid } from '@/components/FormSection'
+import FormSection, { FieldLabel, FormGrid, MetricCallout, MoneyInput } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
@@ -172,10 +172,7 @@ export default function NewSale() {
                       <input className="control" value={form.quantity_sold} min={1} max={selectedItem?.quantity_available} onChange={event => updateField('quantity_sold', event.target.value)} inputMode="numeric" style={{ width: '100%', padding: '0 12px' }} />
                     </FieldLabel>
                     <FieldLabel label="Sale price total" required error={errors.sale_price} name="sale_price">
-                      <span style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                        <input className="control" value={form.sale_price} onChange={event => updateField('sale_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                      </span>
+                      <MoneyInput value={form.sale_price} onChange={event => updateField('sale_price', event.target.value)} />
                     </FieldLabel>
                     <FieldLabel label="Date" required error={errors.sale_date} name="sale_date">
                       <input className="control" type="date" value={form.sale_date} onChange={event => updateField('sale_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
@@ -225,16 +222,13 @@ export default function NewSale() {
                             <strong style={{ color: 'var(--warning)' }}><MoneyDisplay value={ownerPayout} /></strong>
                           </div>
                         )}
-                        <div style={{ border: '1px dashed #bcd6c9', borderRadius: 14, background: '#f3f7f4', padding: 14 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-hover)', fontWeight: 700 }}>
-                            <CircleDollarSign size={17} />
-                            Company profit
-                          </div>
-                          <div className="serif" style={{ marginTop: 7, color: companyProfit >= 0 ? 'var(--primary-hover)' : 'var(--danger)', fontSize: 27, fontWeight: 700 }}>
-                            <MoneyDisplay value={companyProfit} />
-                          </div>
-                          <div style={{ color: 'var(--muted)', fontSize: 12 }}>{margin.toFixed(2)}% margin</div>
-                        </div>
+                        <MetricCallout
+                          icon={<CircleDollarSign size={17} />}
+                          label="Company profit"
+                          value={<MoneyDisplay value={companyProfit} />}
+                          valueColor={companyProfit >= 0 ? undefined : 'var(--danger)'}
+                          hint={`${margin.toFixed(2)}% margin`}
+                        />
                       </>
                     </PermissionGate>
                   </div>

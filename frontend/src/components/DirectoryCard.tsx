@@ -93,6 +93,7 @@ export default function DirectoryCard({
           justifyContent: 'space-between',
           gap: 12,
           padding: '18px 18px 14px',
+          borderBottom: toolbar ? undefined : '1px solid var(--row-line)',
         }}
       >
         <div>

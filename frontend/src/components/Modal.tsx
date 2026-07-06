@@ -51,7 +51,7 @@ export default function Modal({ open, onClose, title, description, footer, width
           ref={formRef}
           onSubmit={onSubmit}
           className="card"
-          style={{ width: `min(${width}px, 100%)`, maxHeight: '88vh', overflow: 'auto' }}
+          style={{ width: `min(${width}px, 100%)`, maxHeight: '88vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }}
           onClick={event => event.stopPropagation()}
         >
           {body}
@@ -59,7 +59,7 @@ export default function Modal({ open, onClose, title, description, footer, width
       ) : (
         <div
           className="card"
-          style={{ width: `min(${width}px, 100%)`, maxHeight: '88vh', overflow: 'auto' }}
+          style={{ width: `min(${width}px, 100%)`, maxHeight: '88vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }}
           onClick={event => event.stopPropagation()}
         >
           {body}

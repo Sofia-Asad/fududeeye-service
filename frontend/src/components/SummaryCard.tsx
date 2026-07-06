@@ -29,7 +29,7 @@ export default function SummaryCard({
   const colors = TONES[tone]
 
   return (
-    <article className="card" style={{ padding: 18, minHeight: 128, position: 'relative' }}>
+    <article className="card card-hover" style={{ padding: 18, minHeight: 128, position: 'relative' }}>
       <div
         style={{
           display: 'flex',
@@ -60,6 +60,7 @@ export default function SummaryCard({
               background: colors.bg,
               color: colors.fg,
               flexShrink: 0,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,.4)',
             }}
           >
             {icon}

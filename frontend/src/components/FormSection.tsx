@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode } from 'react'
 
 const TONES = {
   primary: { bg: 'var(--primary-soft)', fg: 'var(--primary-hover)' },
@@ -83,6 +83,80 @@ export function FormGrid({ children }: { children: ReactNode }) {
   )
 }
 
+/** Text input with a leading icon, e.g. phone/email/location fields. */
+export function IconInput({ icon, style, ...props }: { icon: ReactNode } & InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <span style={{ position: 'relative', display: 'block' }}>
+      <span style={{ position: 'absolute', left: 13, top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: 'var(--muted)', pointerEvents: 'none' }}>
+        {icon}
+      </span>
+      <input className="control" style={{ width: '100%', padding: '0 12px 0 38px', ...style }} {...props} />
+    </span>
+  )
+}
+
+/** Currency input with a bordered "$" prefix chip, for price/amount fields. */
+export function MoneyInput({ style, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <span style={{ position: 'relative', display: 'block' }}>
+      <span
+        style={{
+          position: 'absolute',
+          left: 1,
+          top: 1,
+          bottom: 1,
+          width: 34,
+          display: 'grid',
+          placeItems: 'center',
+          color: 'var(--muted)',
+          fontWeight: 700,
+          fontSize: 13,
+          borderRight: '1px solid var(--border-strong)',
+          background: 'var(--surface-2)',
+          borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)',
+          pointerEvents: 'none',
+        }}
+      >
+        $
+      </span>
+      <input
+        className="control"
+        inputMode="decimal"
+        style={{ width: '100%', padding: '0 12px 0 44px', fontVariantNumeric: 'tabular-nums', ...style }}
+        {...props}
+      />
+    </span>
+  )
+}
+
+/** Highlighted metric readout, e.g. expected markup or company profit preview. */
+export function MetricCallout({
+  icon,
+  label,
+  value,
+  valueColor,
+  hint,
+}: {
+  icon?: ReactNode
+  label: ReactNode
+  value: ReactNode
+  valueColor?: string
+  hint?: ReactNode
+}) {
+  return (
+    <div style={{ border: '1px dashed var(--accent-dark)', borderRadius: 14, background: 'var(--accent-weak)', padding: 15 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-hover)', fontWeight: 700, fontSize: 13 }}>
+        {icon}
+        {label}
+      </div>
+      <div className="serif" style={{ marginTop: 7, color: valueColor ?? 'var(--primary-hover)', fontSize: 26, fontWeight: 700 }}>
+        {value}
+      </div>
+      {hint && <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 12 }}>{hint}</div>}
+    </div>
+  )
+}
+
 export function SegmentedControl<T extends string>({
   value,
   options,
@@ -100,7 +174,8 @@ export function SegmentedControl<T extends string>({
         gap: 4,
         padding: 4,
         borderRadius: 10,
-        background: '#f0eee3',
+        background: 'var(--thead-bg)',
+        border: '1px solid var(--border)',
       }}
     >
       {options.map(option => {
@@ -116,9 +191,10 @@ export function SegmentedControl<T extends string>({
               borderRadius: 8,
               background: active ? '#ffffff' : 'transparent',
               color: active ? 'var(--primary-hover)' : 'var(--muted)',
-              boxShadow: active ? '0 1px 2px rgba(34,48,42,.08)' : 'none',
+              boxShadow: active ? 'var(--shadow-sm)' : 'none',
               fontWeight: 700,
               cursor: 'pointer',
+              transition: 'background-color 150ms ease, color 150ms ease, box-shadow 150ms ease',
             }}
           >
             {option.label}

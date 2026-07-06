@@ -5,8 +5,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Jost', 'system-ui', 'sans-serif'],
-        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         // Brand
@@ -24,6 +24,7 @@ const config: Config = {
         // Neutrals (warm off-white background family)
         bg: '#F6F4ED',
         surface: '#FFFFFF',
+        mist: '#AAAAA9',
         border: {
           DEFAULT: '#E6E3DA',
           strong: '#D8D3C4',
@@ -41,14 +42,15 @@ const config: Config = {
         info: { DEFAULT: '#3D5AA8', soft: '#E8EDF6' },
       },
       borderRadius: {
-        sm: '8px',
-        md: '12px',
-        lg: '20px',
+        sm: '9px',
+        md: '13px',
+        lg: '22px',
       },
       boxShadow: {
         sm: '0 1px 2px rgba(26, 32, 87, 0.06)',
         md: '0 4px 16px rgba(26, 32, 87, 0.08)',
-        lg: '0 12px 32px rgba(26, 32, 87, 0.12)',
+        lg: '0 20px 48px rgba(26, 32, 87, 0.16)',
+        gold: '0 1px 2px rgba(26, 32, 87, 0.3), 0 10px 22px rgba(242, 183, 5, 0.22)',
       },
       transitionDuration: {
         DEFAULT: '150ms',

@@ -8,7 +8,7 @@ import { deleteItem, getItem, listCategories, updateItem } from '@/api/inventory
 import { useAuth } from '@/auth/AuthContext'
 import ActionFooter from '@/components/ActionFooter'
 import DetailMeta from '@/components/DetailMeta'
-import FormSection, { FieldLabel, FormGrid, SegmentedControl } from '@/components/FormSection'
+import FormSection, { FieldLabel, FormGrid, MetricCallout, MoneyInput, SegmentedControl } from '@/components/FormSection'
 import ItemImageManager from '@/components/ItemImageManager'
 import Layout from '@/components/Layout'
 import MoneyDisplay from '@/components/MoneyDisplay'
@@ -360,39 +360,27 @@ export default function ItemDetail() {
                           </select>
                         </FieldLabel>
                         <FieldLabel label="Owner asking price">
-                          <span style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                            <input className="control" value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                          </span>
+                          <MoneyInput value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} />
                         </FieldLabel>
                       </>
                     ) : (
                       <FieldLabel label="Cost price">
-                        <span style={{ position: 'relative' }}>
-                          <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                          <input className="control" value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                        </span>
+                        <MoneyInput value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} />
                       </FieldLabel>
                     )}
 
                     <FieldLabel label="Listed price">
-                      <span style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                        <input className="control" value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                      </span>
+                      <MoneyInput value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} />
                     </FieldLabel>
                   </FormGrid>
 
-                  <div style={{ border: '1px dashed #bcd6c9', borderRadius: 14, background: '#f3f7f4', padding: 15 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-hover)', fontWeight: 700 }}>
-                      <CircleDollarSign size={17} />
-                      Expected markup
-                    </div>
-                    <div className="serif" style={{ marginTop: 7, color: formMarkup >= 0 ? 'var(--primary-hover)' : 'var(--danger)', fontSize: 26, fontWeight: 700 }}>
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(formMarkup)}
-                    </div>
-                    <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 12 }}>API values are authoritative after save.</div>
-                  </div>
+                  <MetricCallout
+                    icon={<CircleDollarSign size={17} />}
+                    label="Expected markup"
+                    value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(formMarkup)}
+                    valueColor={formMarkup >= 0 ? undefined : 'var(--danger)'}
+                    hint="API values are authoritative after save."
+                  />
                 </div>
               </FormSection>
 

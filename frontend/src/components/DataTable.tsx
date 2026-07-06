@@ -41,7 +41,7 @@ export default function DataTable<T>({
                   textTransform: 'uppercase',
                   color: 'var(--text-faint)',
                   borderTop: '1px solid var(--row-line)',
-                  borderBottom: '1px solid var(--row-line)',
+                  borderBottom: '2px solid var(--border-strong)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -54,9 +54,9 @@ export default function DataTable<T>({
           {rows.map((row, index) => (
             <tr
               key={index}
-              style={{ transition: 'background-color 150ms ease' }}
-              onMouseEnter={event => { event.currentTarget.style.background = 'var(--thead-bg)' }}
-              onMouseLeave={event => { event.currentTarget.style.background = 'transparent' }}
+              style={{ background: index % 2 === 1 ? 'rgba(250,249,244,.55)' : 'transparent', transition: 'background-color 150ms ease' }}
+              onMouseEnter={event => { event.currentTarget.style.background = 'var(--primary-soft)' }}
+              onMouseLeave={event => { event.currentTarget.style.background = index % 2 === 1 ? 'rgba(250,249,244,.55)' : 'transparent' }}
             >
               {columns.map(column => (
                 <td

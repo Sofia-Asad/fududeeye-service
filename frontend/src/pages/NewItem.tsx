@@ -8,7 +8,7 @@ import { listCustomers } from '@/api/customers'
 import { createItem, listCategories } from '@/api/inventory'
 import { useAuth } from '@/auth/AuthContext'
 import ActionFooter from '@/components/ActionFooter'
-import FormSection, { FieldLabel, FormGrid, SegmentedControl } from '@/components/FormSection'
+import FormSection, { FieldLabel, FormGrid, MetricCallout, MoneyInput, SegmentedControl } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import PermissionGate from '@/components/PermissionGate'
@@ -228,39 +228,27 @@ export default function NewItem() {
                         </select>
                       </FieldLabel>
                       <FieldLabel label="Owner asking price" required error={errors.owner_asking_price} name="owner_asking_price">
-                        <span style={{ position: 'relative' }}>
-                          <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                          <input className="control" value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                        </span>
+                        <MoneyInput value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} />
                       </FieldLabel>
                     </>
                   ) : (
                     <FieldLabel label="Cost price" required error={errors.cost_price} name="cost_price">
-                      <span style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                        <input className="control" value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                      </span>
+                      <MoneyInput value={form.cost_price} onChange={event => updateField('cost_price', event.target.value)} />
                     </FieldLabel>
                   )}
 
                   <FieldLabel label="Listed price" required error={errors.listed_price} name="listed_price">
-                    <span style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: 12, top: 11, color: 'var(--muted)' }}>$</span>
-                      <input className="control" value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px 0 32px' }} />
-                    </span>
+                    <MoneyInput value={form.listed_price} onChange={event => updateField('listed_price', event.target.value)} />
                   </FieldLabel>
                 </FormGrid>
 
-                <div style={{ border: '1px dashed #bcd6c9', borderRadius: 14, background: '#f3f7f4', padding: 15 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-hover)', fontWeight: 700 }}>
-                    <CircleDollarSign size={17} />
-                    Expected markup
-                  </div>
-                  <div className="serif" style={{ marginTop: 7, color: expectedMarkup >= 0 ? 'var(--primary-hover)' : 'var(--danger)', fontSize: 26, fontWeight: 700 }}>
-                    {markupReady ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expectedMarkup) : '$0.00'}
-                  </div>
-                  <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 12 }}>API values are authoritative after save.</div>
-                </div>
+                <MetricCallout
+                  icon={<CircleDollarSign size={17} />}
+                  label="Expected markup"
+                  value={markupReady ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expectedMarkup) : '$0.00'}
+                  valueColor={expectedMarkup >= 0 ? undefined : 'var(--danger)'}
+                  hint="API values are authoritative after save."
+                />
               </div>
             </FormSection>
 

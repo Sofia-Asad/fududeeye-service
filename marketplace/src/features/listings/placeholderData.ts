@@ -8,4 +8,4 @@ export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 ]
 
 /** Decorative hero image only — not backend data. */
-export const HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=70'
+export const HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=1600&q=75'

@@ -23,8 +23,15 @@ const badgeVariants = cva(
   },
 )
 
-export interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
+  dot?: boolean
+}
 
-export default function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />
+export default function Badge({ className, variant, dot, children, ...props }: BadgeProps) {
+  return (
+    <span className={cn(badgeVariants({ variant }), className)} {...props}>
+      {dot && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" aria-hidden="true" />}
+      {children}
+    </span>
+  )
 }

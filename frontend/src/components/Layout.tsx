@@ -15,7 +15,6 @@ import {
   Package,
   ShieldCheck,
   ShoppingCart,
-  Store,
   UserCog,
   Users,
   type LucideIcon,
@@ -25,6 +24,7 @@ import type { ReactNode } from 'react'
 import { listInquiries } from '@/api/inquiries'
 import { listComplaints, listDemands } from '@/api/service'
 import { useAuth } from '@/auth/AuthContext'
+import Logo from '@/components/Logo'
 import type { Role } from '@/types/auth'
 
 interface NavItem {
@@ -70,17 +70,19 @@ function SidebarLink({ item }: { item: NavItem }) {
     <Link
       to={item.to}
       style={{
+        position: 'relative',
         display: 'flex',
         minHeight: 38,
         alignItems: 'center',
         gap: 11,
-        padding: '8px 10px',
+        padding: '8px 10px 8px 13px',
         borderRadius: 10,
         color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)',
         background: active ? 'var(--sidebar-active-bg)' : 'transparent',
         textDecoration: 'none',
         fontSize: 14,
         fontWeight: active ? 700 : 500,
+        transition: 'background-color 150ms ease',
       }}
       onMouseEnter={event => {
         if (!active) event.currentTarget.style.background = '#f0eee3'
@@ -89,6 +91,12 @@ function SidebarLink({ item }: { item: NavItem }) {
         if (!active) event.currentTarget.style.background = 'transparent'
       }}
     >
+      {active && (
+        <span
+          aria-hidden="true"
+          style={{ position: 'absolute', left: 0, top: '22%', bottom: '22%', width: 3, borderRadius: 999, background: 'var(--accent)' }}
+        />
+      )}
       <Icon size={17} strokeWidth={2} style={{ color: active ? 'var(--sidebar-active-text)' : 'var(--muted)', flexShrink: 0 }} />
       <span style={{ flex: 1 }}>{item.label}</span>
       {item.badge !== undefined && (
@@ -232,9 +240,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <div className="mobile-topbar">
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)', textDecoration: 'none' }}>
-          <span style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'var(--primary)', color: '#fff' }}>
-            <Store size={18} />
-          </span>
+          <Logo size={36} />
           <span>
             <span style={{ display: 'block', fontSize: 16, fontWeight: 700, lineHeight: 1.05 }}>Fududeeye</span>
             <span style={{ display: 'block', marginTop: 2, color: 'var(--muted)', fontSize: 9.5, fontWeight: 700, letterSpacing: '.14em' }}>CRM</span>
@@ -262,9 +268,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       <aside className="desktop-sidebar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '20px 18px 18px' }}>
-          <div style={{ width: 38, height: 38, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'var(--primary)', color: '#fff', flexShrink: 0 }}>
-            <Store size={19} />
-          </div>
+          <Logo size={38} />
           <div>
             <div style={{ color: 'var(--text)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
             <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>

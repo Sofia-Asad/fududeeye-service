@@ -1,6 +1,7 @@
-import { Mail, MapPin, Phone, Store } from 'lucide-react'
+import { Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import Logo from '@/components/Logo'
 import { FacebookIcon, InstagramIcon, LinkedInIcon, XIcon } from '@/components/ui/SocialIcons'
 import {
   CONTACT_INFO,
@@ -29,9 +30,7 @@ export default function Footer() {
       <Container className="grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-6">
         <div className="lg:col-span-2">
           <Link to="/" className="flex items-center gap-2.5 text-white">
-            <span className="grid h-9 w-9 place-items-center rounded-md bg-white/10">
-              <Store size={18} />
-            </span>
+            <Logo size={36} />
             <span className="font-serif text-lg font-semibold">{SITE_NAME}</span>
           </Link>
           <p className="mt-4 max-w-xs text-sm text-white/60">{SITE_TAGLINE}</p>

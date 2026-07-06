@@ -1,18 +1,26 @@
-import { Store } from 'lucide-react'
 import { Link, Outlet } from 'react-router-dom'
 
 import AuthIllustration from '@/components/auth/AuthIllustration'
+import Logo from '@/components/Logo'
 import { SITE_NAME, SITE_TAGLINE } from '@/constants/nav'
 
 /** Split layout used by Login/Register: brand + illustration on the left, form on the right. */
 export default function AuthLayout() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-primary-deep p-10 text-white lg:flex">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-white/10">
-            <Store size={18} />
-          </span>
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-primary-deep p-10 text-white lg:flex">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full blur-3xl"
+          style={{ background: 'rgba(242,183,5,.18)' }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -left-20 h-60 w-60 rounded-full blur-3xl"
+          style={{ background: 'rgba(255,255,255,.06)' }}
+        />
+        <Link to="/" className="relative flex items-center gap-2.5">
+          <Logo size={36} />
           <span className="font-serif text-lg font-semibold">{SITE_NAME}</span>
         </Link>
 
@@ -32,9 +40,7 @@ export default function AuthLayout() {
       <div className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">
           <Link to="/" className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="grid h-9 w-9 place-items-center rounded-md bg-primary text-white">
-              <Store size={18} />
-            </span>
+            <Logo size={36} />
             <span className="font-serif text-lg font-semibold text-ink">{SITE_NAME}</span>
           </Link>
           <Outlet />

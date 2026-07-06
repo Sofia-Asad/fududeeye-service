@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react'
 
 import Accordion, { type AccordionItemData } from '@/components/ui/Accordion'
 import { buttonVariants } from '@/components/ui/Button'
-import PageTitle from '@/components/ui/PageTitle'
+import PageHero from '@/components/ui/PageHero'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import Container from '@/layout/Container'
 import Section from '@/layout/Section'
@@ -56,30 +56,40 @@ const FAQ_ITEMS: AccordionItemData[] = [
 
 export default function FAQ() {
   return (
-    <Container className="py-10">
-      <PageTitle
+    <>
+      <PageHero
         eyebrow="Support"
         title="Frequently asked questions"
         subtitle="Common questions about buying, selling, and how Fududeeye works."
       />
 
-      <Section className="max-w-3xl py-8">
-        <Accordion items={FAQ_ITEMS} />
+      <Container className="py-10">
+        <Section className="max-w-3xl py-8">
+          <Accordion items={FAQ_ITEMS} />
 
-        <div className="mt-8 rounded-lg border border-border bg-primary-soft/40 p-6 text-center">
-          <p className="font-serif text-lg font-semibold text-ink">Still have a question?</p>
-          <p className="mt-1 text-sm text-ink-muted">Our team is happy to help — reach out any time.</p>
-          <a
-            href={buildWhatsAppUrl(FAQ_WHATSAPP_MESSAGE)}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={`${buttonVariants({ size: 'md' })} mt-4`}
-          >
-            <MessageCircle size={16} />
-            Chat on WhatsApp
-          </a>
-        </div>
-      </Section>
-    </Container>
+          <div className="relative mt-8 overflow-hidden rounded-lg bg-gradient-to-br from-primary via-primary to-primary-deep p-6 text-center shadow-lg">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-gold/20 blur-3xl"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-white/5 blur-3xl"
+            />
+            <p className="relative font-serif text-lg font-semibold text-white">Still have a question?</p>
+            <p className="relative mt-1 text-sm text-white/70">Our team is happy to help — reach out any time.</p>
+            <a
+              href={buildWhatsAppUrl(FAQ_WHATSAPP_MESSAGE)}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={`${buttonVariants({ variant: 'secondary', size: 'md' })} relative mt-4`}
+            >
+              <MessageCircle size={16} />
+              Chat on WhatsApp
+            </a>
+          </div>
+        </Section>
+      </Container>
+    </>
   )
 }

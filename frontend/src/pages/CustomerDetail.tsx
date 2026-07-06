@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Pencil, Phone, ShoppingCart, X } from 'lucide-react'
+import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Pencil, Phone, ShoppingCart, Smartphone } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -14,8 +14,9 @@ import {
 import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import EmptyState from '@/components/EmptyState'
-import { Field } from '@/components/FormSection'
+import { Field, IconInput } from '@/components/FormSection'
 import Layout from '@/components/Layout'
+import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import { SkeletonLines } from '@/components/Skeleton'
@@ -329,53 +330,54 @@ export default function CustomerDetail() {
         </div>
       </div>
 
-      {editOpen && form && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(34,48,42,.34)', padding: 20 }} onClick={() => setEditOpen(false)}>
-          <form ref={formRef} onSubmit={submitEdit} className="card" style={{ width: 'min(560px, 100%)', maxHeight: '88vh', overflow: 'auto' }} onClick={event => event.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '20px 22px', borderBottom: '1px solid var(--row-line)' }}>
-              <div>
-                <h2 className="serif" style={{ margin: 0, fontSize: 25, lineHeight: 1.1 }}>Edit customer</h2>
-                <p style={{ margin: '5px 0 0', color: 'var(--muted)', fontSize: 13 }}>Update contact profile details.</p>
-              </div>
-              <button type="button" onClick={() => setEditOpen(false)} className="secondary-button" style={{ width: 38, padding: 0 }} aria-label="Close">
-                <X size={16} />
-              </button>
-            </div>
-            <div style={{ padding: 22, display: 'grid', gap: 16 }}>
-              <Field label="Full name" error={errors.full_name} name="full_name">
-                <input autoFocus className="control" value={form.full_name} onChange={event => updateField('full_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-              </Field>
-              <div className="modal-grid-2" style={{ gap: 14 }}>
-                <Field label="Phone" error={errors.phone} name="phone">
-                  <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-                </Field>
-                <Field label="Alternate phone" error={errors.alternate_phone} name="alternate_phone">
-                  <input className="control" value={form.alternate_phone} onChange={event => updateField('alternate_phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-                </Field>
-              </div>
-              <Field label="Email" error={errors.email} name="email">
-                <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-              </Field>
-              <Field label="Address" error={errors.address} name="address">
-                <textarea className="control" value={form.address} onChange={event => updateField('address', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-              <Field label="Notes" error={errors.notes} name="notes">
-                <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-              </Field>
-              <label className="checkbox-row">
-                <input checked={form.is_active} onChange={event => updateField('is_active', event.target.checked)} type="checkbox" />
-                Active customer
-              </label>
-              {save.isError && <div className="error-banner">{formErrorMessage(save.error, 'Customer could not be saved.')}</div>}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 22px', borderTop: '1px solid var(--row-line)' }}>
+      {form && (
+        <Modal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          title="Edit customer"
+          description="Update contact profile details."
+          formRef={formRef}
+          onSubmit={submitEdit}
+          footer={(
+            <>
               <button type="button" onClick={() => setEditOpen(false)} className="secondary-button">Cancel</button>
               <button type="submit" disabled={save.isPending} className="primary-button" style={{ opacity: save.isPending ? .7 : 1 }}>
                 {save.isPending ? 'Saving...' : 'Save customer'}
               </button>
-            </div>
-          </form>
-        </div>
+            </>
+          )}
+        >
+          <Field label="Full name" error={errors.full_name} name="full_name">
+            <input autoFocus className="control" value={form.full_name} onChange={event => updateField('full_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+          </Field>
+          <div className="modal-grid-2" style={{ gap: 14 }}>
+            <Field label="Phone" error={errors.phone} name="phone">
+              <IconInput icon={<Phone size={15} />} value={form.phone} onChange={event => updateField('phone', event.target.value)} />
+            </Field>
+            <Field label="Alternate phone" error={errors.alternate_phone} name="alternate_phone">
+              <IconInput icon={<Smartphone size={15} />} value={form.alternate_phone} onChange={event => updateField('alternate_phone', event.target.value)} />
+            </Field>
+          </div>
+          <Field label="Email" error={errors.email} name="email">
+            <IconInput icon={<Mail size={15} />} type="email" value={form.email} onChange={event => updateField('email', event.target.value)} />
+          </Field>
+          <Field label="Address" error={errors.address} name="address">
+            <span style={{ position: 'relative', display: 'block' }}>
+              <span style={{ position: 'absolute', left: 13, top: 12, color: 'var(--muted)', pointerEvents: 'none' }}>
+                <MapPin size={15} />
+              </span>
+              <textarea className="control" value={form.address} onChange={event => updateField('address', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: '11px 12px 11px 38px', resize: 'vertical' }} />
+            </span>
+          </Field>
+          <Field label="Notes" error={errors.notes} name="notes">
+            <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+          </Field>
+          <label className="checkbox-row">
+            <input checked={form.is_active} onChange={event => updateField('is_active', event.target.checked)} type="checkbox" />
+            Active customer
+          </label>
+          {save.isError && <div className="error-banner">{formErrorMessage(save.error, 'Customer could not be saved.')}</div>}
+        </Modal>
       )}
     </Layout>
   )

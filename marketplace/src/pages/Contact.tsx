@@ -6,7 +6,7 @@ import { z } from 'zod'
 import Button, { buttonVariants } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
-import PageTitle from '@/components/ui/PageTitle'
+import PageHero from '@/components/ui/PageHero'
 import Textarea from '@/components/ui/Textarea'
 import { CONTACT_INFO } from '@/constants/nav'
 import { useCreateInquiry } from '@/features/inquiries/useCreateInquiry'
@@ -49,20 +49,23 @@ export default function Contact() {
   }
 
   return (
-    <Container className="py-10">
-      <PageTitle
+    <>
+      <PageHero
         eyebrow="Get in touch"
         title="Contact us"
         subtitle="Questions about buying, selling, or anything else — send us a message and our team will get back to you."
       />
 
+      <Container className="py-10">
       <Section className="py-8">
         <div className="grid gap-8 lg:grid-cols-[1fr_1.3fr]">
           <div className="grid gap-4">
-            <Card>
+            <Card className="border-t-4 border-t-info">
               <CardContent className="grid gap-4">
                 <div className="flex items-start gap-3">
-                  <Mail size={18} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-info-soft text-info">
+                    <Mail size={18} aria-hidden="true" />
+                  </span>
                   <div>
                     <p className="text-sm font-semibold text-ink">Email</p>
                     <a href={`mailto:${CONTACT_INFO.email}`} className="text-sm text-ink-muted hover:text-primary">
@@ -71,7 +74,9 @@ export default function Contact() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Phone size={18} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-success-soft text-success">
+                    <Phone size={18} aria-hidden="true" />
+                  </span>
                   <div>
                     <p className="text-sm font-semibold text-ink">Phone</p>
                     <a href={`tel:${CONTACT_INFO.phone.replace(/\s/g, '')}`} className="text-sm text-ink-muted hover:text-primary">
@@ -80,7 +85,9 @@ export default function Contact() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <MapPin size={18} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-gold-soft text-gold-hover">
+                    <MapPin size={18} aria-hidden="true" />
+                  </span>
                   <div>
                     <p className="text-sm font-semibold text-ink">Address</p>
                     <p className="text-sm text-ink-muted">{CONTACT_INFO.address}</p>
@@ -99,7 +106,7 @@ export default function Contact() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="border-t-4 border-t-primary">
             <CardContent>
               {isSuccess ? (
                 <div className="flex items-start gap-2.5 rounded-md bg-success-soft px-4 py-3 text-sm text-success">
@@ -146,6 +153,7 @@ export default function Contact() {
           </Card>
         </div>
       </Section>
-    </Container>
+      </Container>
+    </>
   )
 }

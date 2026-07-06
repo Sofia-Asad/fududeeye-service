@@ -1,7 +1,8 @@
-import { Menu, MessageCircle, Store, X } from 'lucide-react'
+import { Menu, MessageCircle, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 import { buttonVariants } from '@/components/ui/Button'
+import Logo from '@/components/Logo'
 import { PRIMARY_NAV_LINKS, SITE_NAME } from '@/constants/nav'
 import { useDisclosure } from '@/hooks/useDisclosure'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
@@ -18,9 +19,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
       <Container className="flex h-16 items-center justify-between gap-6">
         <NavLink to="/" className="flex shrink-0 items-center gap-2.5 text-ink">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-primary text-white">
-            <Store size={18} />
-          </span>
+          <Logo size={36} />
           <span>
             <span className="block font-serif text-lg font-semibold leading-tight">{SITE_NAME}</span>
             <span className="block text-[10px] font-semibold uppercase tracking-widest text-ink-faint">
@@ -38,8 +37,8 @@ export default function Navbar() {
                   end={link.to === '/'}
                   className={({ isActive }) =>
                     cn(
-                      'rounded-md px-3.5 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-primary-soft hover:text-primary',
-                      isActive && 'bg-primary-soft text-primary',
+                      'relative rounded-md px-3.5 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-primary-soft hover:text-primary',
+                      isActive && 'bg-primary-soft text-primary after:absolute after:bottom-0.5 after:left-1/2 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-gold after:content-[\'\']',
                     )
                   }
                 >
