@@ -85,7 +85,7 @@ function SidebarLink({ item }: { item: NavItem }) {
         transition: 'background-color 150ms ease',
       }}
       onMouseEnter={event => {
-        if (!active) event.currentTarget.style.background = '#f0eee3'
+        if (!active) event.currentTarget.style.background = 'rgba(255,255,255,.08)'
       }}
       onMouseLeave={event => {
         if (!active) event.currentTarget.style.background = 'transparent'
@@ -97,7 +97,7 @@ function SidebarLink({ item }: { item: NavItem }) {
           style={{ position: 'absolute', left: 0, top: '22%', bottom: '22%', width: 3, borderRadius: 999, background: 'var(--accent)' }}
         />
       )}
-      <Icon size={17} strokeWidth={2} style={{ color: active ? 'var(--sidebar-active-text)' : 'var(--muted)', flexShrink: 0 }} />
+      <Icon size={17} strokeWidth={2} style={{ color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-muted)', flexShrink: 0 }} />
       <span style={{ flex: 1 }}>{item.label}</span>
       {item.badge !== undefined && (
         <span
@@ -270,8 +270,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '20px 18px 18px' }}>
           <Logo size={38} />
           <div>
-            <div style={{ color: 'var(--text)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
-            <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>
+            <div style={{ color: 'var(--sidebar-fg)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
+            <div style={{ marginTop: 3, color: 'var(--sidebar-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>
           </div>
         </div>
 
@@ -279,7 +279,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <nav style={{ display: 'grid', gap: 22, overflowY: 'auto', paddingRight: 2 }}>
             {visibleGroups.map(group => (
               <div key={group.label}>
-                <div style={{ margin: '0 8px 8px', color: 'var(--muted)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase' }}>
+                <div style={{ margin: '0 8px 8px', color: 'var(--sidebar-muted)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase' }}>
                   {group.label}
                 </div>
                 <div style={{ display: 'grid', gap: 3 }}>

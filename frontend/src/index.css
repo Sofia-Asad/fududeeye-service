@@ -51,13 +51,13 @@
   --shadow: 0 1px 2px rgba(20,29,68,.04), 0 8px 24px rgba(20,29,68,.07);
   --shadow-lg: 0 20px 48px rgba(20,29,68,.16);
   --shadow-gold: 0 1px 2px rgba(20,29,68,.3), 0 10px 22px rgba(242,183,5,.22);
-  --sidebar-bg: #fbfaf5;
-  --sidebar-fg: #22302a;
-  --sidebar-muted: #75806f;
-  --sidebar-text: #3c4a42;
-  --sidebar-active-bg: #e7e8f2;
-  --sidebar-active-text: #12163f;
-  --sidebar-accent: #1a2057;
+  --sidebar-bg: var(--primary-deep);
+  --sidebar-fg: #ffffff;
+  --sidebar-muted: rgba(255, 255, 255, .55);
+  --sidebar-text: rgba(255, 255, 255, .8);
+  --sidebar-active-bg: rgba(242, 183, 5, .16);
+  --sidebar-active-text: var(--accent);
+  --sidebar-accent: var(--accent);
 }
 
 * { box-sizing: border-box; }
@@ -555,7 +555,7 @@ textarea.control {
   height: 100vh;
   flex-shrink: 0;
   flex-direction: column;
-  border-right: 1px solid #e9e6da;
+  border-right: 1px solid rgba(255, 255, 255, .06);
   background: var(--sidebar-bg);
 }
 

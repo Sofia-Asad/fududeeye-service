@@ -160,6 +160,8 @@ export default function Dashboard() {
                   value={moneyShort(dashboard.data.month.income)}
                   caption={<span style={{ color: 'var(--success)' }}>+ {dashboard.data.month.sales_count} sales this month</span>}
                   icon={<Banknote size={19} />}
+                  tone="success"
+                  valueColor="var(--success)"
                 />
                 <SummaryCard
                   label="Fududeeye profit"

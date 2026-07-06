@@ -6,6 +6,7 @@ const TONES = {
   gold: { bg: 'var(--accent-weak)', fg: 'var(--accent-dark)' },
   red: { bg: 'var(--danger-bg)', fg: 'var(--money-owed)' },
   blue: { bg: 'var(--info-bg)', fg: 'var(--info)' },
+  success: { bg: 'var(--success-bg)', fg: 'var(--success)' },
   neutral: { bg: 'var(--neutral-bg)', fg: 'var(--neutral)' },
 } as const
 

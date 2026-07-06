@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import type { Location } from 'react-router-dom'
 import { AxiosError } from 'axios'
-import { Eye, Lock, ShieldCheck, UserRound } from 'lucide-react'
+import { Eye, Lock, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 
 import { useAuth } from '@/auth/AuthContext'
 import Logo from '@/components/Logo'
@@ -55,10 +55,14 @@ export default function Login() {
         </div>
 
         <div>
-          <h1 className="serif" style={{ margin: 0, fontSize: 40, lineHeight: 1.1, fontWeight: 700 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 999, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.15)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 700, letterSpacing: '.04em' }}>
+            <Sparkles size={13} />
+            SECURE STAFF SIGN-IN
+          </span>
+          <h1 className="serif" style={{ margin: '16px 0 0', fontSize: 40, lineHeight: 1.1, fontWeight: 700 }}>
             You bring the item.<br />
             We find the buyer.<br />
-            You get your price.
+            You get <span style={{ color: 'var(--accent)' }}>your price</span>.
           </h1>
           <p style={{ maxWidth: 330, margin: '18px 0 0', color: 'rgba(255,255,255,.68)', fontSize: 14, lineHeight: 1.55 }}>
             A calm operating desk for consignment inventory, owner payouts, customer demands, and accountable sales.
@@ -71,8 +75,8 @@ export default function Login() {
             ['USD', 'profit math'],
             ['3', 'roles'],
           ].map(([value, label]) => (
-            <div key={label} style={{ borderTop: '1px solid rgba(255,255,255,.18)', paddingTop: 12 }}>
-              <div className="serif" style={{ fontSize: 26, fontWeight: 700 }}>{value}</div>
+            <div key={label} style={{ borderTop: '2px solid var(--accent)', paddingTop: 12 }}>
+              <div className="serif" style={{ fontSize: 26, fontWeight: 700, color: 'var(--accent)' }}>{value}</div>
               <div style={{ color: 'rgba(255,255,255,.62)', fontSize: 11.5 }}>{label}</div>
             </div>
           ))}
@@ -80,11 +84,12 @@ export default function Login() {
       </section>
 
       <section className="login-form-shell">
-        <form onSubmit={submit} style={{ width: '100%', maxWidth: 380 }}>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 600 }}>Welcome back</div>
-            <h2 className="serif" style={{ margin: '5px 0 0', fontSize: 32, lineHeight: 1.1, fontWeight: 700 }}>Sign in</h2>
-            <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 13.5 }}>Use your staff account to continue.</p>
+        <form onSubmit={submit} className="card" style={{ width: '100%', maxWidth: 400, padding: 36, boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ marginBottom: 26 }}>
+            <div style={{ color: 'var(--accent-dark)', fontSize: 12.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}>Welcome back</div>
+            <h2 className="serif" style={{ margin: '7px 0 0', fontSize: 32, lineHeight: 1.1, fontWeight: 700 }}>Sign in</h2>
+            <span style={{ display: 'block', width: 40, height: 3, marginTop: 12, borderRadius: 999, background: 'var(--accent)' }} />
+            <p style={{ margin: '14px 0 0', color: 'var(--muted)', fontSize: 13.5 }}>Use your staff account to continue.</p>
           </div>
 
           <label className="field-label" style={{ marginBottom: 15 }}>
@@ -118,7 +123,7 @@ export default function Login() {
           </label>
 
           <label className="checkbox-row" style={{ marginTop: 16 }}>
-            <input type="checkbox" />
+            <input type="checkbox" style={{ accentColor: 'var(--accent-dark)' }} />
             Keep me signed in
           </label>
 
@@ -132,8 +137,8 @@ export default function Login() {
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 18, border: '1px solid var(--border)', borderRadius: 999, background: '#fff', padding: '9px 12px', color: 'var(--muted)', fontSize: 12.5 }}>
-            <ShieldCheck size={16} color="var(--primary)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 18, border: '1px solid var(--accent-weak)', borderRadius: 999, background: 'var(--accent-weak)', padding: '9px 12px', color: 'var(--accent-dark)', fontSize: 12.5, fontWeight: 600 }}>
+            <ShieldCheck size={16} color="var(--accent-dark)" />
             Every staff action is captured in the audit log.
           </div>
         </form>
