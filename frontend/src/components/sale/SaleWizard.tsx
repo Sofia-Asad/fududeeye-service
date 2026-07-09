@@ -35,7 +35,7 @@ const saleSchema = z.object({
   quantity_sold: z.string().trim().regex(/^[1-9]\d*$/, 'Quantity must be at least 1.'),
   sale_price: z.string().trim().regex(moneyPattern, 'Use a valid amount.'),
   sale_date: z.string().trim().min(1, 'Date is required.'),
-  payment_method: z.enum(['CASH', 'EVC_PLUS', 'ZAAD', 'BANK_TRANSFER', 'OTHER']),
+  payment_method: z.enum(['CASH', 'EVC_PLUS', 'ZAAD', 'SAHAL', 'BANK_TRANSFER', 'OTHER']),
   notes: z.string().trim(),
 })
 

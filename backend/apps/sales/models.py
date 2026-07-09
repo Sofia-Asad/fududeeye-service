@@ -14,6 +14,7 @@ class Sale(AuditedModel):
         CASH = 'CASH', 'Cash'
         EVC_PLUS = 'EVC_PLUS', 'EVC Plus'
         ZAAD = 'ZAAD', 'Zaad'
+        SAHAL = 'SAHAL', 'Sahal'
         BANK_TRANSFER = 'BANK_TRANSFER', 'Bank Transfer'
         OTHER = 'OTHER', 'Other'
 

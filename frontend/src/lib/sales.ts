@@ -4,6 +4,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CASH: 'Cash',
   EVC_PLUS: 'EVC Plus',
   ZAAD: 'Zaad',
+  SAHAL: 'Sahal',
   BANK_TRANSFER: 'Bank transfer',
   OTHER: 'Other',
 }
@@ -12,6 +13,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'CASH',
   'EVC_PLUS',
   'ZAAD',
+  'SAHAL',
   'BANK_TRANSFER',
   'OTHER',
 ]

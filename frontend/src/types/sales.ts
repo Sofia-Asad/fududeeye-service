@@ -5,7 +5,7 @@ export interface PaginatedResponse<T> {
   results: T[]
 }
 
-export type PaymentMethod = 'CASH' | 'EVC_PLUS' | 'ZAAD' | 'BANK_TRANSFER' | 'OTHER'
+export type PaymentMethod = 'CASH' | 'EVC_PLUS' | 'ZAAD' | 'SAHAL' | 'BANK_TRANSFER' | 'OTHER'
 export type PayoutStatus = 'NA' | 'PENDING' | 'PAID'
 
 export interface Sale {

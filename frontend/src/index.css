@@ -570,10 +570,10 @@ textarea.control {
 }
 
 .gold-outline-button:hover {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--accent);
+  border-color: var(--accent);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(20, 29, 68, .28);
+  box-shadow: 0 4px 14px rgba(242, 183, 5, .3);
   transform: translateY(-1px);
 }
 
@@ -1092,8 +1092,8 @@ textarea.control {
   gap: 14px;
   height: 66px;
   padding: 0 28px;
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
-  box-shadow: 0 1px 2px rgba(20, 29, 68, .15), 0 4px 14px rgba(242, 183, 5, .2);
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%);
+  box-shadow: 0 1px 2px rgba(20, 29, 68, .3), 0 4px 14px rgba(20, 29, 68, .2);
 }
 
 .mobile-topbar,

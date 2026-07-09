@@ -35,7 +35,7 @@ const expenseSchema = z.object({
   category: z.string().trim().min(1, 'Category is required.'),
   amount: z.string().trim().regex(moneyPattern, 'Use a valid amount.'),
   expense_date: z.string().trim().min(1, 'Date is required.'),
-  payment_method: z.enum(['CASH', 'EVC_PLUS', 'ZAAD', 'BANK_TRANSFER', 'OTHER']),
+  payment_method: z.enum(['CASH', 'EVC_PLUS', 'ZAAD', 'SAHAL', 'BANK_TRANSFER', 'OTHER']),
   description: z.string().trim().min(1, 'Description is required.'),
   notes: z.string().trim(),
 }).refine(value => Number(value.amount) > 0, {

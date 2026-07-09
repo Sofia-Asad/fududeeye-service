@@ -45,7 +45,7 @@ function matchesClientFilter(sale: Sale, filter: QuickFilter) {
     case 'today': return isToday(parseISO(sale.sale_date))
     case 'week': return isThisWeek(parseISO(sale.sale_date), { weekStartsOn: 1 })
     case 'month': return isThisMonth(parseISO(sale.sale_date))
-    case 'mobile': return sale.payment_method === 'EVC_PLUS' || sale.payment_method === 'ZAAD'
+    case 'mobile': return sale.payment_method === 'EVC_PLUS' || sale.payment_method === 'ZAAD' || sale.payment_method === 'SAHAL'
     case 'completed': return sale.payout_status !== 'PENDING'
     default: return true
   }
