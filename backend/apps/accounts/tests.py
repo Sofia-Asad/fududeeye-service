@@ -1,10 +1,29 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
+from django.core.cache import cache
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient
 
 from apps.core.models import AuditLog
 
 User = get_user_model()
+
+
+@pytest.fixture(autouse=True)
+def reset_throttle_cache():
+    """DRF's AnonRateThrottle counts requests in Django's cache, which — unlike
+    the DB — isn't rolled back between tests. Without this, password-reset
+    tests exhaust the 5/hour throttle and fail from test order, not behavior."""
+    cache.clear()
+    yield
+    cache.clear()
+
+
+def make_uid_token(user):
+    return urlsafe_base64_encode(force_bytes(user.pk)), default_token_generator.make_token(user)
 
 
 @pytest.fixture
@@ -21,6 +40,7 @@ def admin_user(db):
         password='pass12345',
         role='ADMIN',
         first_name='Admin',
+        email='admin_auth@fududeeye.local',
     )
 
 
@@ -42,13 +62,14 @@ def sales_user(db):
         password='pass12345',
         role='SALES',
         first_name='Sales',
+        email='sales_auth@fududeeye.local',
     )
 
 
 @pytest.mark.django_db
 def test_login_returns_user_and_session_cookie(client, manager_user):
     resp = client.post('/api/v1/auth/login/', {
-        'username': 'manager_auth',
+        'email': 'manager_auth@fududeeye.local',
         'password': 'pass12345',
     })
     assert resp.status_code == 200
@@ -59,9 +80,9 @@ def test_login_returns_user_and_session_cookie(client, manager_user):
 
 
 @pytest.mark.django_db
-def test_login_accepts_email_as_identifier(client, manager_user):
+def test_login_is_case_insensitive_on_email(client, manager_user):
     resp = client.post('/api/v1/auth/login/', {
-        'username': 'manager_auth@fududeeye.local',
+        'email': 'MANAGER_AUTH@fududeeye.local',
         'password': 'pass12345',
     })
     assert resp.status_code == 200
@@ -69,9 +90,20 @@ def test_login_accepts_email_as_identifier(client, manager_user):
 
 
 @pytest.mark.django_db
+def test_login_rejects_plain_username(client, manager_user):
+    """Username-based login is gone — the field is a required, validated email."""
+    resp = client.post('/api/v1/auth/login/', {
+        'email': 'manager_auth',
+        'password': 'pass12345',
+    })
+    assert resp.status_code == 400
+    assert 'email' in resp.data
+
+
+@pytest.mark.django_db
 def test_login_rejects_unknown_email(client):
     resp = client.post('/api/v1/auth/login/', {
-        'username': 'nobody@fududeeye.local',
+        'email': 'nobody@fududeeye.local',
         'password': 'pass12345',
     })
     assert resp.status_code == 400
@@ -80,7 +112,7 @@ def test_login_rejects_unknown_email(client):
 @pytest.mark.django_db
 def test_login_does_not_create_user_update_audit_for_last_login(client, manager_user):
     resp = client.post('/api/v1/auth/login/', {
-        'username': 'manager_auth',
+        'email': 'manager_auth@fududeeye.local',
         'password': 'pass12345',
     })
 
@@ -119,9 +151,10 @@ def test_login_rejects_inactive_staff(client):
         password='pass12345',
         role='SALES',
         is_active_staff=False,
+        email='inactive_staff@fududeeye.local',
     )
     resp = client.post('/api/v1/auth/login/', {
-        'username': 'inactive_staff',
+        'email': 'inactive_staff@fududeeye.local',
         'password': 'pass12345',
     })
     assert resp.status_code == 400
@@ -255,3 +288,151 @@ def test_user_viewset_has_no_destroy(client, admin_user, sales_user):
     resp = client.delete(f'/api/v1/users/{sales_user.pk}/')
     assert resp.status_code == 405
     assert User.objects.filter(pk=sales_user.pk).exists()
+
+
+# ── self-service password reset ─────────────────────────────────────────────
+
+GENERIC_RESET_MESSAGE = 'If an account exists with this email, a password reset link has been sent.'
+
+
+@pytest.mark.django_db
+def test_password_reset_request_sends_email_for_registered_user(client, sales_user):
+    resp = client.post('/api/v1/auth/password-reset/', {'email': 'sales_auth@fududeeye.local'})
+    assert resp.status_code == 200
+    assert resp.data['detail'] == GENERIC_RESET_MESSAGE
+
+    assert len(mail.outbox) == 1
+    sent = mail.outbox[0]
+    assert sent.to == ['sales_auth@fududeeye.local']
+    assert 'reset-password' in sent.body
+
+
+@pytest.mark.django_db
+def test_password_reset_request_does_not_reveal_unknown_email(client):
+    resp = client.post('/api/v1/auth/password-reset/', {'email': 'nobody@fududeeye.local'})
+    assert resp.status_code == 200
+    assert resp.data['detail'] == GENERIC_RESET_MESSAGE
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_password_reset_request_does_not_email_inactive_staff(client):
+    User.objects.create_user(
+        username='inactive_reset',
+        password='pass12345',
+        role='SALES',
+        email='inactive_reset@fududeeye.local',
+        is_active_staff=False,
+    )
+    resp = client.post('/api/v1/auth/password-reset/', {'email': 'inactive_reset@fududeeye.local'})
+    assert resp.status_code == 200
+    assert resp.data['detail'] == GENERIC_RESET_MESSAGE
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_password_reset_confirm_changes_password(client, sales_user):
+    uid, token = make_uid_token(sales_user)
+    resp = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password': 'BrandNewPass123',
+        'confirm_password': 'BrandNewPass123',
+    })
+    assert resp.status_code == 200
+
+    sales_user.refresh_from_db()
+    assert sales_user.check_password('BrandNewPass123')
+    assert AuditLog.objects.filter(
+        model_name='User', object_id=str(sales_user.pk), action=AuditLog.Action.CUSTOM,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_password_reset_confirm_token_is_single_use(client, sales_user):
+    uid, token = make_uid_token(sales_user)
+    first = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password': 'BrandNewPass123',
+        'confirm_password': 'BrandNewPass123',
+    })
+    assert first.status_code == 200
+
+    # Token hash is derived in part from the password hash, so it's invalid
+    # the moment the password it was issued for actually changes.
+    second = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password': 'AnotherPass456',
+        'confirm_password': 'AnotherPass456',
+    })
+    assert second.status_code == 400
+
+
+@pytest.mark.django_db
+def test_password_reset_confirm_rejects_invalid_token(client, sales_user):
+    uid, _ = make_uid_token(sales_user)
+    resp = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': 'not-a-real-token',
+        'new_password': 'BrandNewPass123',
+        'confirm_password': 'BrandNewPass123',
+    })
+    assert resp.status_code == 400
+    sales_user.refresh_from_db()
+    assert sales_user.check_password('pass12345')
+
+
+@pytest.mark.django_db
+def test_password_reset_confirm_rejects_mismatched_passwords(client, sales_user):
+    uid, token = make_uid_token(sales_user)
+    resp = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password': 'BrandNewPass123',
+        'confirm_password': 'SomethingElse123',
+    })
+    assert resp.status_code == 400
+    assert 'confirm_password' in resp.data
+
+
+@pytest.mark.django_db
+def test_password_reset_confirm_rejects_weak_password(client, sales_user):
+    uid, token = make_uid_token(sales_user)
+    resp = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password': 'weakpass',
+        'confirm_password': 'weakpass',
+    })
+    assert resp.status_code == 400
+    assert 'new_password' in resp.data
+
+
+@pytest.mark.django_db
+def test_password_reset_confirm_rejects_unknown_uid(client):
+    resp = client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': urlsafe_base64_encode(force_bytes(999999)),
+        'token': 'irrelevant',
+        'new_password': 'BrandNewPass123',
+        'confirm_password': 'BrandNewPass123',
+    })
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_login_works_with_new_password_after_reset(client, sales_user):
+    uid, token = make_uid_token(sales_user)
+    client.post('/api/v1/auth/password-reset-confirm/', {
+        'uid': uid,
+        'token': token,
+        'new_password': 'BrandNewPass123',
+        'confirm_password': 'BrandNewPass123',
+    })
+
+    resp = client.post('/api/v1/auth/login/', {
+        'email': 'sales_auth@fududeeye.local',
+        'password': 'BrandNewPass123',
+    })
+    assert resp.status_code == 200

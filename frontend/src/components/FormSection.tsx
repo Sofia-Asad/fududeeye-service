@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
 
 const TONES = {
   primary: { bg: 'var(--primary-soft)', fg: 'var(--primary-hover)' },
@@ -126,6 +126,18 @@ export function MoneyInput({ style, ...props }: InputHTMLAttributes<HTMLInputEle
         {...props}
       />
     </span>
+  )
+}
+
+/** Short, resizable textarea for compact enterprise forms — replaces oversized default textareas inside accordion sections/modals. */
+export function CompactTextarea({ style, rows = 2, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className="control"
+      rows={rows}
+      style={{ width: '100%', resize: 'vertical', ...style }}
+      {...props}
+    />
   )
 }
 

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 import { buttonVariants } from '@/components/ui/Button'
 import Logo from '@/components/Logo'
-import { PRIMARY_NAV_LINKS, SITE_NAME } from '@/constants/nav'
+import { CRM_LOGIN_URL, PRIMARY_NAV_LINKS, SITE_NAME } from '@/constants/nav'
 import { useDisclosure } from '@/hooks/useDisclosure'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { cn } from '@/lib/utils'
@@ -59,9 +59,9 @@ export default function Navbar() {
             <MessageCircle size={15} />
             Chat on WhatsApp
           </a>
-          <NavLink to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <a href={CRM_LOGIN_URL} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
             Staff Login
-          </NavLink>
+          </a>
         </div>
 
         <button

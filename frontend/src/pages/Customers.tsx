@@ -109,14 +109,14 @@ export default function Customers() {
           title="Customers"
           subtitle="Buyers, sellers, and consignment owners in one directory."
           actions={(
-            <Link to="/customers/new" className="primary-button">
+            <Link to="/customers/new" className="wizard-gold-button">
               <Plus size={16} />
               New customer
             </Link>
           )}
         />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 18, marginBottom: 22 }}>
           <SummaryCard label="Total customers" value={customers.data?.count ?? rows.length} caption="Directory records" icon={<UsersRound size={18} />} />
           <SummaryCard label="Active on page" value={activeOnPage} caption="Available for new records" icon={<UserPlus size={18} />} tone="blue" />
           <SummaryCard label="Buyer profiles" value={buyerOnPage} caption="On current page" icon={<UsersRound size={18} />} tone="amber" />
@@ -163,7 +163,7 @@ export default function Customers() {
                   icon={<UsersRound size={18} />}
                   title="No customers yet."
                   subtitle="Create your first customer to start tracking buyers and sellers."
-                  action={<Link to="/customers/new" className="primary-button"><Plus size={16} />New customer</Link>}
+                  action={<Link to="/customers/new" className="wizard-gold-button"><Plus size={16} />New customer</Link>}
                 />
               )}
             />

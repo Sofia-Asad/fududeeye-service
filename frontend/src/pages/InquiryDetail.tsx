@@ -1,12 +1,29 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Mail, MessageCircleQuestion, Phone, Save, Tag, UserCheck, UserPlus } from 'lucide-react'
+import {
+  ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
+  Globe,
+  Mail,
+  MessageCircle,
+  MessageCircleQuestion,
+  Phone,
+  PhoneCall,
+  Save,
+  ShoppingCart,
+  Tag,
+  UserCheck,
+  UserPlus,
+  XCircle,
+} from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { convertInquiry, getInquiry, updateInquiry } from '@/api/inquiries'
 import { useAuth } from '@/auth/AuthContext'
 import DetailMeta from '@/components/DetailMeta'
 import Layout from '@/components/Layout'
+import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
 import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
@@ -15,6 +32,7 @@ import { errorMessage } from '@/lib/errors'
 import { INQUIRY_KIND_LABELS, INQUIRY_STATUS_LABELS, INQUIRY_STATUSES } from '@/lib/inquiry'
 import { formatDate } from '@/lib/service'
 import { notifyError, notifySuccess } from '@/lib/toast'
+import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import type { InquiryStatus, InquiryUpdatePayload } from '@/types/inquiry'
 
 export default function InquiryDetail() {
@@ -26,6 +44,8 @@ export default function InquiryDetail() {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<InquiryStatus>('NEW')
   const [staffNotes, setStaffNotes] = useState('')
+  const [followUpOpen, setFollowUpOpen] = useState(false)
+  const [followUpDate, setFollowUpDate] = useState('')
 
   const inquiry = useQuery({
     queryKey: ['inquiry', inquiryId],
@@ -59,6 +79,16 @@ export default function InquiryDetail() {
     save.mutate({ handled_by: user.id, status: status === 'NEW' ? 'CONTACTED' : status })
   }
 
+  function scheduleFollowUp() {
+    if (!followUpDate) return
+    const note = `Follow-up scheduled for ${formatDate(followUpDate)}.`
+    const newNotes = staffNotes ? `${note}\n${staffNotes}` : note
+    setStaffNotes(newNotes)
+    save.mutate({ staff_notes: newNotes })
+    setFollowUpOpen(false)
+    setFollowUpDate('')
+  }
+
   const convert = useMutation({
     mutationFn: () => convertInquiry(inquiryId),
     onSuccess: result => {
@@ -70,6 +100,17 @@ export default function InquiryDetail() {
         notifySuccess(result.customer_created ? 'Customer created' : 'Matched to existing customer')
       }
       navigate(`/customers/${result.customer_id}`)
+    },
+    onError: (error: unknown) => notifyError(errorMessage(error)),
+  })
+
+  const convertForSale = useMutation({
+    mutationFn: () => convertInquiry(inquiryId),
+    onSuccess: result => {
+      void queryClient.invalidateQueries({ queryKey: ['inquiry', inquiryId] })
+      void queryClient.invalidateQueries({ queryKey: ['inquiries'] })
+      notifySuccess(result.customer_created ? 'Customer created — continue in New Sale.' : 'Matched to existing customer — continue in New Sale.')
+      navigate(`/sales/new?item=${inquiry.data?.item}&buyer=${result.customer_id}`)
     },
     onError: (error: unknown) => notifyError(errorMessage(error)),
   })
@@ -129,13 +170,91 @@ export default function InquiryDetail() {
                     ? <Link to={`/items/${current.item}`} style={{ color: 'var(--primary-hover)' }}>{current.item_title}</Link>
                     : current.kind === 'ITEM_REQUEST' ? (current.item_needed || '-') : INQUIRY_KIND_LABELS[current.kind],
                 },
+                ...(current.item ? [
+                  { label: 'Category', value: current.item_category_name || '-' },
+                  { label: 'Price', value: current.item_listed_price ? <MoneyDisplay value={current.item_listed_price} /> : '-' },
+                ] : []),
                 { label: 'Message', value: current.message || '-' },
+                {
+                  label: 'Source',
+                  value: (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)' }}>
+                      <Globe size={11} />
+                      Website
+                    </span>
+                  ),
+                },
                 { label: 'Received', value: formatDate(current.created_at) },
                 { label: 'Updated', value: formatDate(current.updated_at) },
               ]}
             />
 
             <aside style={{ display: 'grid', gap: 16 }}>
+              <section className="card" style={{ padding: 20 }}>
+                <h2 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700 }}>Quick actions</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <a href={`tel:${current.phone}`} className="secondary-button" style={{ justifyContent: 'center' }}>
+                    <PhoneCall size={15} />
+                    Call Customer
+                  </a>
+                  <a
+                    href={buildWhatsAppUrl(current.phone, `Hi ${current.full_name}, thanks for reaching out to Fududeeye${current.item_title ? ` about "${current.item_title}"` : ''}.`)}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="secondary-button"
+                    style={{ justifyContent: 'center' }}
+                  >
+                    <MessageCircle size={15} />
+                    Open WhatsApp
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => save.mutate({ status: 'CONTACTED' })}
+                    disabled={save.isPending || current.status === 'CONTACTED'}
+                    className="secondary-button"
+                    style={{ justifyContent: 'center' }}
+                  >
+                    <CheckCircle2 size={15} />
+                    Mark Contacted
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => save.mutate({ status: 'CLOSED' })}
+                    disabled={save.isPending || current.status === 'CLOSED'}
+                    className="secondary-button"
+                    style={{ justifyContent: 'center' }}
+                  >
+                    <XCircle size={15} />
+                    Close Inquiry
+                  </button>
+                </div>
+
+                {followUpOpen ? (
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                    <input
+                      type="date"
+                      className="control"
+                      value={followUpDate}
+                      onChange={event => setFollowUpDate(event.target.value)}
+                      style={{ width: '100%', padding: '0 12px' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={scheduleFollowUp} disabled={!followUpDate || save.isPending} className="primary-button" style={{ flex: 1, justifyContent: 'center' }}>
+                        Confirm date
+                      </button>
+                      <button type="button" onClick={() => setFollowUpOpen(false)} className="secondary-button" style={{ flex: 1, justifyContent: 'center' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setFollowUpOpen(true)} className="secondary-button" style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}>
+                    <CalendarClock size={15} />
+                    Schedule Follow-up
+                  </button>
+                )}
+              </section>
+
               <section className="card" style={{ padding: 20 }}>
                 <h2 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700 }}>Workflow</h2>
                 <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
@@ -186,6 +305,25 @@ export default function InquiryDetail() {
                   <UserPlus size={16} />
                   {convert.isPending ? 'Converting...' : 'Convert to Customer'}
                 </button>
+
+                {current.item && (
+                  <>
+                    <p style={{ margin: '12px 0 10px', color: 'var(--muted)', fontSize: 12.5 }}>
+                      Already talked to them? Jump straight into recording the sale for this listing.
+                    </p>
+                    {convertForSale.isError && <div className="error-banner" style={{ marginBottom: 12 }}>{errorMessage(convertForSale.error)}</div>}
+                    <button
+                      type="button"
+                      onClick={() => convertForSale.mutate()}
+                      disabled={convertForSale.isPending}
+                      className="wizard-gold-button"
+                      style={{ width: '100%', opacity: convertForSale.isPending ? .7 : 1 }}
+                    >
+                      <ShoppingCart size={16} />
+                      {convertForSale.isPending ? 'Preparing...' : 'Convert to Sale'}
+                    </button>
+                  </>
+                )}
               </section>
             </aside>
           </div>

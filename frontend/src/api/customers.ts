@@ -36,6 +36,10 @@ export async function updateCustomer(id: number, payload: CustomerPayload) {
   return response.data
 }
 
+export async function deleteCustomer(id: number) {
+  await api.delete(`/customers/${id}/`)
+}
+
 export async function listCustomerItems(customerId: number) {
   const response = await api.get<PaginatedResponse<ItemSummary>>('/items/', {
     params: { owner: customerId, ordering: '-created_at' },

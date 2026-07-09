@@ -1,17 +1,25 @@
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth.tokens import default_token_generator
 from django.utils.decorators import method_decorator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import filters, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.permissions import IsAdmin
+from apps.accounts.throttles import PasswordResetConfirmThrottle, PasswordResetRequestThrottle
 from apps.core.middleware import get_current_ip
 from apps.core.models import AuditLog
 
+from .emails import send_password_reset_email
 from .serializers import (
     LoginSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     ResetPasswordSerializer,
     UserCreateSerializer,
     UserSerializer,
@@ -19,6 +27,8 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+GENERIC_RESET_MESSAGE = 'If an account exists with this email, a password reset link has been sent.'
 
 
 def _log_auth_event(user, action):
@@ -45,16 +55,15 @@ def me(request):
 def login_view(request):
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    identifier = serializer.validated_data['username']
+    email = serializer.validated_data['email']
     password = serializer.validated_data['password']
 
-    user = authenticate(request, username=identifier, password=password)
-    if user is None and '@' in identifier:
-        # Allow staff to sign in with their email too — look up the matching
-        # username and retry, rather than requiring a second auth backend.
-        matched = User.objects.filter(email__iexact=identifier).first()
-        if matched:
-            user = authenticate(request, username=matched.username, password=password)
+    user = None
+    matched = User.objects.filter(email__iexact=email).first()
+    if matched:
+        # USERNAME_FIELD is still 'username' at the Django auth-backend level —
+        # the API contract is email-only, but ModelBackend authenticates by username.
+        user = authenticate(request, username=matched.username, password=password)
 
     if user is None or not user.is_active or not user.is_active_staff:
         return Response({'detail': 'Invalid credentials.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -62,6 +71,50 @@ def login_view(request):
     login(request, user)
     _log_auth_event(user, AuditLog.Action.LOGIN)
     return Response(UserSerializer(user).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([PasswordResetRequestThrottle])
+def password_reset_request_view(request):
+    """Always responds with the same generic message so the API never reveals
+    whether an email address belongs to an account (prevents enumeration)."""
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data['email']
+
+    user = User.objects.filter(email__iexact=email, is_active=True, is_active_staff=True).first()
+    if user is not None:
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = f'{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}'
+        send_password_reset_email(user, reset_url)
+
+    return Response({'detail': GENERIC_RESET_MESSAGE})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([PasswordResetConfirmThrottle])
+def password_reset_confirm_view(request):
+    serializer = PasswordResetConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user = serializer.validated_data['user']
+
+    user.set_password(serializer.validated_data['new_password'])
+    user.save(update_fields=['password'])
+
+    AuditLog.objects.create(
+        user=user,
+        action=AuditLog.Action.CUSTOM,
+        model_name='User',
+        object_id=str(user.pk),
+        object_repr=str(user),
+        changes={'password': 'reset via forgot-password link'},
+        ip_address=get_current_ip(),
+    )
+
+    return Response({'detail': 'Password changed successfully.'})
 
 
 @api_view(['POST'])

@@ -1,12 +1,24 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from apps.inventory.models import Category, Item
 
 from .models import Inquiry
+from .throttles import InquiryCreateThrottle
 
 User = get_user_model()
+
+
+@pytest.fixture(autouse=True)
+def reset_throttle_cache():
+    """DRF's AnonRateThrottle counts requests in Django's cache, which isn't
+    rolled back between tests — without this, the many anonymous inquiry-create
+    tests in this file would exhaust each other's throttle budget by test order."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
@@ -18,7 +30,7 @@ def client():
 
 @pytest.fixture
 def admin_user(db):
-    return User.objects.create_user(username='admin_mkt', password='pass', role='ADMIN')
+    return User.objects.create_user(username='admin_mkt', password='pass', role='ADMIN', email='admin_mkt@fududeeye.local')
 
 
 @pytest.fixture
@@ -203,7 +215,7 @@ def test_staff_can_list_and_update_inquiry_status(client, admin_user, active_ite
 
 @pytest.mark.django_db
 def test_non_admin_cannot_delete_inquiry(client, active_item):
-    sales_user = User.objects.create_user(username='sales_mkt', password='pass', role='SALES')
+    sales_user = User.objects.create_user(username='sales_mkt', password='pass', role='SALES', email='sales_mkt@fududeeye.local')
     inquiry = Inquiry.objects.create(
         kind=Inquiry.Kind.ITEM_INTEREST, full_name='A', phone='1', item=active_item,
     )
@@ -301,3 +313,49 @@ def test_anonymous_cannot_convert_inquiry(client, active_item):
     )
     response = client.post(f'/api/v1/inquiries/{inquiry.pk}/convert/')
     assert response.status_code in (401, 403)
+
+
+# ── website → CRM lead capture (throttle + staff-facing listing details) ───────
+
+@pytest.mark.django_db
+def test_inquiry_create_is_rate_limited_by_ip(client, active_item, monkeypatch):
+    # DRF's throttle `THROTTLE_RATES` is snapshotted onto the class at import time
+    # from settings, so overriding the setting mid-test has no effect — the rate
+    # must be monkeypatched onto the throttle class directly.
+    monkeypatch.setattr(InquiryCreateThrottle, 'THROTTLE_RATES', {'inquiry_create': '2/hour'})
+    payload = {
+        'kind': 'ITEM_INTEREST',
+        'full_name': 'Amina Hassan',
+        'phone': '+252618000001',
+        'item': active_item.pk,
+    }
+    assert client.post('/api/v1/inquiries/', payload).status_code == 201
+    assert client.post('/api/v1/inquiries/', payload).status_code == 201
+    third = client.post('/api/v1/inquiries/', payload)
+    assert third.status_code == 429
+
+
+@pytest.mark.django_db
+def test_staff_inquiry_listing_includes_item_category_and_price(client, admin_user, active_item):
+    inquiry = Inquiry.objects.create(
+        kind=Inquiry.Kind.ITEM_INTEREST, full_name='Amina Hassan', phone='+252618000001', item=active_item,
+    )
+    client.force_authenticate(user=admin_user)
+    response = client.get(f'/api/v1/inquiries/{inquiry.pk}/')
+    assert response.status_code == 200
+    assert response.data['item_category_name'] == active_item.category.name
+    assert response.data['item_listed_price'] == active_item.listed_price
+    assert response.data['item_owner_type'] == active_item.owner_type
+
+
+@pytest.mark.django_db
+def test_staff_inquiry_listing_details_are_null_without_an_item(client, admin_user, category):
+    inquiry = Inquiry.objects.create(
+        kind=Inquiry.Kind.ITEM_REQUEST, full_name='Yusuf Ali', phone='+252618000002',
+        item_needed='55-inch TV', category=category,
+    )
+    client.force_authenticate(user=admin_user)
+    response = client.get(f'/api/v1/inquiries/{inquiry.pk}/')
+    assert response.status_code == 200
+    assert response.data['item_category_name'] is None
+    assert response.data['item_listed_price'] is None

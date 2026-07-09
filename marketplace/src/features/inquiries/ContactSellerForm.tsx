@@ -11,7 +11,7 @@ import { useCreateInquiry } from '@/features/inquiries/useCreateInquiry'
 const contactSellerSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name.'),
   phone: z.string().trim().min(6, 'Enter a valid phone number.'),
-  message: z.string().trim().max(1000, 'Keep it under 1000 characters.').optional(),
+  message: z.string().trim().min(1, 'Enter a message.').max(1000, 'Keep it under 1000 characters.'),
 })
 
 type ContactSellerForm = z.infer<typeof contactSellerSchema>
@@ -42,7 +42,10 @@ export default function ContactSellerForm({ itemId }: { itemId: string }) {
     return (
       <div className="flex items-start gap-2.5 rounded-md bg-success-soft px-4 py-3 text-sm text-success">
         <CheckCircle2 size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
-        <p>Thanks! Your message has been sent — our team will contact you shortly.</p>
+        <p>
+          <strong className="block">Thank you!</strong>
+          Your inquiry has been sent successfully. Our team will contact you shortly.
+        </p>
       </div>
     )
   }
@@ -63,7 +66,7 @@ export default function ContactSellerForm({ itemId }: { itemId: string }) {
         {...register('phone')}
       />
       <Textarea
-        label="Message (optional)"
+        label="Message"
         placeholder="Is this still available?"
         rows={3}
         error={errors.message?.message}

@@ -1,10 +1,11 @@
-import { Mail, MapPin, Phone } from 'lucide-react'
+import { Clock, Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import Logo from '@/components/Logo'
 import { FacebookIcon, InstagramIcon, LinkedInIcon, XIcon } from '@/components/ui/SocialIcons'
 import {
   CONTACT_INFO,
+  CRM_LOGIN_URL,
   FOOTER_QUICK_LINKS,
   FOOTER_SUPPORT_LINKS,
   SITE_NAME,
@@ -14,10 +15,10 @@ import { useCategoriesQuery } from '@/features/listings/queries'
 import Container from '@/layout/Container'
 
 const SOCIAL_LINKS = [
-  { label: 'Facebook', href: 'https://facebook.com', icon: FacebookIcon },
-  { label: 'Instagram', href: 'https://instagram.com', icon: InstagramIcon },
-  { label: 'X', href: 'https://x.com', icon: XIcon },
-  { label: 'LinkedIn', href: 'https://linkedin.com', icon: LinkedInIcon },
+  { label: 'Facebook', href: '#', icon: FacebookIcon },
+  { label: 'Instagram', href: '#', icon: InstagramIcon },
+  { label: 'LinkedIn', href: '#', icon: LinkedInIcon },
+  { label: 'X', href: '#', icon: XIcon },
 ]
 
 export default function Footer() {
@@ -33,7 +34,8 @@ export default function Footer() {
             <Logo size={36} />
             <span className="font-serif text-lg font-semibold">{SITE_NAME}</span>
           </Link>
-          <p className="mt-4 max-w-xs text-sm text-white/60">{SITE_TAGLINE}</p>
+          <p className="mt-3 text-sm font-semibold text-white/80">{CONTACT_INFO.companyName}</p>
+          <p className="mt-2 max-w-xs text-sm text-white/60">{SITE_TAGLINE}</p>
           <ul className="mt-6 flex gap-3">
             {SOCIAL_LINKS.map(social => (
               <li key={social.label}>
@@ -87,6 +89,11 @@ export default function Footer() {
                 </Link>
               </li>
             ))}
+            <li>
+              <a href={CRM_LOGIN_URL} className="text-sm text-white/70 hover:text-gold">
+                Staff Login
+              </a>
+            </li>
           </ul>
         </nav>
 
@@ -95,19 +102,30 @@ export default function Footer() {
           <ul className="mt-4 grid gap-3 text-sm text-white/70">
             <li className="flex items-start gap-2.5">
               <Mail size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-gold" />
-              <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-gold">
-                {CONTACT_INFO.email}
-              </a>
+              <span className="grid gap-0.5">
+                <a href={`mailto:${CONTACT_INFO.generalEmail}`} className="hover:text-gold">{CONTACT_INFO.generalEmail}</a>
+                <a href={`mailto:${CONTACT_INFO.supportEmail}`} className="hover:text-gold">{CONTACT_INFO.supportEmail}</a>
+              </span>
             </li>
             <li className="flex items-start gap-2.5">
               <Phone size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-gold" />
-              <a href={`tel:${CONTACT_INFO.phone.replace(/\s/g, '')}`} className="hover:text-gold">
-                {CONTACT_INFO.phone}
-              </a>
+              <span className="grid gap-0.5">
+                {CONTACT_INFO.phones.map(phone => (
+                  <a key={phone} href={`tel:${phone.replace(/\s/g, '')}`} className="hover:text-gold">{phone}</a>
+                ))}
+              </span>
             </li>
             <li className="flex items-start gap-2.5">
               <MapPin size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-gold" />
-              <span>{CONTACT_INFO.address}</span>
+              <span>{CONTACT_INFO.addressLines.join(', ')}</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Clock size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-gold" />
+              <span className="grid gap-0.5">
+                {CONTACT_INFO.workingHours.map(row => (
+                  <span key={row.days}>{row.days}: {row.hours}</span>
+                ))}
+              </span>
             </li>
           </ul>
         </div>

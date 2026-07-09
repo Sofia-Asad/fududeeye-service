@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 import { buttonVariants } from '@/components/ui/Button'
-import { PRIMARY_NAV_LINKS } from '@/constants/nav'
+import { CRM_LOGIN_URL, PRIMARY_NAV_LINKS } from '@/constants/nav'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { cn } from '@/lib/utils'
 
@@ -48,9 +48,9 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
             <MessageCircle size={16} />
             Chat on WhatsApp
           </a>
-          <NavLink to="/login" onClick={onClose} className={cn(buttonVariants({ variant: 'ghost' }), 'w-full')}>
+          <a href={CRM_LOGIN_URL} onClick={onClose} className={cn(buttonVariants({ variant: 'ghost' }), 'w-full')}>
             Staff Login
-          </NavLink>
+          </a>
         </div>
       </nav>
     </div>

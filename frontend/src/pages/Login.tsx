@@ -1,18 +1,18 @@
 import { useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import type { Location } from 'react-router-dom'
 import { AxiosError } from 'axios'
-import { Eye, Lock, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
+import { Eye, Lock, Mail, ShieldCheck } from 'lucide-react'
 
 import { useAuth } from '@/auth/AuthContext'
-import Logo from '@/components/Logo'
+import AuthBrandPanel from '@/components/AuthBrandPanel'
 
 export default function Login() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -29,7 +29,7 @@ export default function Login() {
     setError('')
     setIsSubmitting(true)
     try {
-      await login(username, password)
+      await login(email, password)
       navigate(from, { replace: true })
     } catch (loginError) {
       const detail = loginError instanceof AxiosError
@@ -43,60 +43,28 @@ export default function Login() {
 
   return (
     <main className="login-shell">
-      <section className="login-brand">
-        <span className="login-brand-glow" aria-hidden="true" style={{ top: -90, right: -70, width: 260, height: 260, background: 'rgba(242,183,5,.18)' }} />
-        <span className="login-brand-glow" aria-hidden="true" style={{ bottom: -110, left: -80, width: 240, height: 240, background: 'rgba(255,255,255,.06)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Logo size={44} />
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>Fududeeye</div>
-            <div style={{ marginTop: 3, fontSize: 10.5, fontWeight: 700, letterSpacing: '.16em', color: 'rgba(255,255,255,.62)' }}>BROKERAGE CRM</div>
-          </div>
-        </div>
-
-        <div>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 999, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.15)', color: 'var(--accent)', fontSize: 11.5, fontWeight: 700, letterSpacing: '.04em' }}>
-            <Sparkles size={13} />
-            SECURE STAFF SIGN-IN
-          </span>
-          <h1 className="serif" style={{ margin: '16px 0 0', fontSize: 40, lineHeight: 1.1, fontWeight: 700 }}>
-            You bring the item.<br />
-            We find the buyer.<br />
-            You get <span style={{ color: 'var(--accent)' }}>your price</span>.
-          </h1>
-          <p style={{ maxWidth: 330, margin: '18px 0 0', color: 'rgba(255,255,255,.68)', fontSize: 14, lineHeight: 1.55 }}>
-            A calm operating desk for consignment inventory, owner payouts, customer demands, and accountable sales.
-          </p>
-        </div>
-
-        <div className="login-stat-grid">
-          {[
-            ['24h', 'audit trail'],
-            ['USD', 'profit math'],
-            ['3', 'roles'],
-          ].map(([value, label]) => (
-            <div key={label} style={{ borderTop: '2px solid var(--accent)', paddingTop: 12 }}>
-              <div className="serif" style={{ fontSize: 26, fontWeight: 700, color: 'var(--accent)' }}>{value}</div>
-              <div style={{ color: 'rgba(255,255,255,.62)', fontSize: 11.5 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <AuthBrandPanel />
 
       <section className="login-form-shell">
-        <form onSubmit={submit} className="card" style={{ width: '100%', maxWidth: 400, padding: 36, boxShadow: 'var(--shadow-lg)' }}>
-          <div style={{ marginBottom: 26 }}>
-            <div style={{ color: 'var(--accent-dark)', fontSize: 12.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}>Welcome back</div>
-            <h2 className="serif" style={{ margin: '7px 0 0', fontSize: 32, lineHeight: 1.1, fontWeight: 700 }}>Sign in</h2>
-            <span style={{ display: 'block', width: 40, height: 3, marginTop: 12, borderRadius: 999, background: 'var(--accent)' }} />
-            <p style={{ margin: '14px 0 0', color: 'var(--muted)', fontSize: 13.5 }}>Use your staff account to continue.</p>
+        <form onSubmit={submit} className="card" style={{ width: '100%', maxWidth: 400, padding: '28px 32px', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ color: 'var(--accent-dark)', fontSize: 11.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}>Welcome back</div>
+            <h2 className="serif" style={{ margin: '6px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 700 }}>Sign in</h2>
+            <span style={{ display: 'block', width: 36, height: 3, marginTop: 10, borderRadius: 999, background: 'var(--accent)' }} />
+            <p style={{ margin: '12px 0 0', color: 'var(--muted)', fontSize: 13 }}>Use your staff account to continue.</p>
           </div>
 
-          <label className="field-label" style={{ marginBottom: 15 }}>
-            <span className="field-title">Username</span>
+          <label className="field-label" style={{ marginBottom: 12 }}>
+            <span className="field-title">Email</span>
             <span className="login-input-wrap">
-              <UserRound size={17} className="login-icon-left" />
-              <input className="control" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" />
+              <Mail size={17} className="login-icon-left" />
+              <input
+                className="control"
+                type="email"
+                value={email}
+                onChange={event => setEmail(event.target.value)}
+                autoComplete="email"
+              />
             </span>
           </label>
 
@@ -122,10 +90,15 @@ export default function Login() {
             </span>
           </label>
 
-          <label className="checkbox-row" style={{ marginTop: 16 }}>
-            <input type="checkbox" style={{ accentColor: 'var(--accent-dark)' }} />
-            Keep me signed in
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+            <label className="checkbox-row">
+              <input type="checkbox" style={{ accentColor: 'var(--accent-dark)' }} />
+              Keep me signed in
+            </label>
+            <Link to="/forgot-password" style={{ color: 'var(--primary-hover)', fontSize: 13, fontWeight: 600 }}>
+              Forgot password?
+            </Link>
+          </div>
 
           {error && (
             <div className="error-banner" style={{ marginTop: 16, fontSize: 13 }}>

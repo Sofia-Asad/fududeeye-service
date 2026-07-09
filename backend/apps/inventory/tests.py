@@ -31,17 +31,17 @@ def client():
 
 @pytest.fixture
 def admin_user(db):
-    return User.objects.create_user(username='admin_inv', password='pass', role='ADMIN')
+    return User.objects.create_user(username='admin_inv', password='pass', role='ADMIN', email='admin_inv@fududeeye.local')
 
 
 @pytest.fixture
 def manager_user(db):
-    return User.objects.create_user(username='mgr_inv', password='pass', role='MANAGER')
+    return User.objects.create_user(username='mgr_inv', password='pass', role='MANAGER', email='mgr_inv@fududeeye.local')
 
 
 @pytest.fixture
 def sales_user(db):
-    return User.objects.create_user(username='sales_inv', password='pass', role='SALES')
+    return User.objects.create_user(username='sales_inv', password='pass', role='SALES', email='sales_inv@fududeeye.local')
 
 
 @pytest.fixture
@@ -353,7 +353,7 @@ def test_manager_cannot_delete_category(client, manager_user, category):
 @pytest.mark.django_db
 def test_sales_user_cannot_delete_item(client, sales_user, category):
     """SALES role must be denied hard-delete on items."""
-    admin = User.objects.create_user(username='tmp_admin', password='pass', role='ADMIN')
+    admin = User.objects.create_user(username='tmp_admin', password='pass', role='ADMIN', email='tmp_admin@fududeeye.local')
     c = APIClient()
     c.default_format = 'json'
     c.force_authenticate(user=admin)
@@ -423,7 +423,7 @@ def test_deleting_primary_image_promotes_next_one(client, admin_user, category):
 
 @pytest.mark.django_db
 def test_sales_user_cannot_delete_image_on_others_item(client, sales_user, category):
-    admin = User.objects.create_user(username='img_admin', password='pass', role='ADMIN')
+    admin = User.objects.create_user(username='img_admin', password='pass', role='ADMIN', email='img_admin@fududeeye.local')
     c = APIClient()
     c.default_format = 'json'
     c.force_authenticate(user=admin)

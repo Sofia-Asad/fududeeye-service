@@ -1,9 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Pencil, Phone, ShoppingCart, Smartphone } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ClipboardList, Mail, MapPin, MessageSquareWarning, Package, Pencil, Phone, ShoppingCart, Smartphone, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  deleteCustomer,
   getCustomer,
   listCustomerComplaints,
   listCustomerDemands,
@@ -19,6 +20,7 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
+import PermissionGate from '@/components/PermissionGate'
 import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
@@ -73,6 +75,7 @@ export default function CustomerDetail() {
   const customerId = Number(id)
   const validCustomerId = Number.isFinite(customerId) && customerId > 0
   const { user } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('Profile')
   const [editOpen, setEditOpen] = useState(false)
@@ -118,6 +121,16 @@ export default function CustomerDetail() {
       notifySuccess('Customer updated')
     },
     onError: error => notifyError(formErrorMessage(error, 'Customer could not be saved.')),
+  })
+
+  const remove = useMutation({
+    mutationFn: () => deleteCustomer(customerId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['customers'] })
+      notifySuccess('Customer deleted')
+      navigate('/customers')
+    },
+    onError: error => notifyError(errorMessage(error)),
   })
 
   function openEdit() {
@@ -230,6 +243,20 @@ export default function CustomerDetail() {
                     Edit
                   </button>
                 )}
+                <PermissionGate minRole="ADMIN">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete ${current.full_name}? This cannot be undone.`)) remove.mutate()
+                    }}
+                    disabled={remove.isPending}
+                    className="danger-button"
+                    style={{ opacity: remove.isPending ? .7 : 1 }}
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </PermissionGate>
               </>
             )}
           />

@@ -51,23 +51,34 @@ export interface AttributeField {
 export const ATTRIBUTE_FIELDS: Record<CategoryKind, AttributeField[]> = {
   REAL_ESTATE: [
     { key: 'bedrooms', label: 'Bedrooms', type: 'number' },
+    { key: 'bathrooms', label: 'Bathrooms', type: 'number' },
+    { key: 'floor', label: 'Floor', type: 'number' },
     { key: 'sqm', label: 'Square meters', type: 'number' },
+    { key: 'parking', label: 'Parking', type: 'select', options: ['Yes', 'No'] },
+    { key: 'furnished', label: 'Furnished', type: 'select', options: ['Yes', 'No'] },
     { key: 'listing_type', label: 'Listing type', type: 'select', options: ['sale', 'rent'] },
   ],
   VEHICLE: [
-    { key: 'make', label: 'Make', type: 'text' },
+    { key: 'make', label: 'Brand', type: 'text' },
     { key: 'model', label: 'Model', type: 'text' },
     { key: 'year', label: 'Year', type: 'number' },
+    { key: 'fuel', label: 'Fuel', type: 'select', options: ['Petrol', 'Diesel', 'Electric', 'Hybrid'] },
     { key: 'mileage', label: 'Mileage', type: 'number' },
+    { key: 'transmission', label: 'Transmission', type: 'select', options: ['Manual', 'Automatic'] },
   ],
   ELECTRONICS: [
     { key: 'brand', label: 'Brand', type: 'text' },
     { key: 'model', label: 'Model', type: 'text' },
+    { key: 'storage', label: 'Storage', type: 'text' },
+    { key: 'ram', label: 'RAM', type: 'text' },
+    { key: 'warranty', label: 'Warranty', type: 'select', options: ['Yes', 'No'] },
     { key: 'serial', label: 'Serial', type: 'text' },
   ],
   FURNITURE: [
     { key: 'material', label: 'Material', type: 'text' },
+    { key: 'color', label: 'Color', type: 'text' },
     { key: 'dimensions', label: 'Dimensions', type: 'text' },
+    { key: 'weight', label: 'Weight (kg)', type: 'number' },
   ],
   GENERIC: [
     { key: 'notes', label: 'Extra notes', type: 'text' },

@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Bell,
   ChartLine,
+  ChevronsLeft,
+  ChevronsRight,
   ClipboardList,
   CreditCard,
   HandCoins,
@@ -20,6 +22,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 
 import { listInquiries } from '@/api/inquiries'
 import { listComplaints, listDemands } from '@/api/service'
@@ -58,7 +61,7 @@ function initialsFor(name: string) {
     .toUpperCase()
 }
 
-function SidebarLink({ item }: { item: NavItem }) {
+function SidebarLink({ item, collapsed = false }: { item: NavItem; collapsed?: boolean }) {
   const match = useMatch({ path: item.to, end: item.end ?? item.to === '/' })
   const active = !!match
   const Icon = item.icon
@@ -69,13 +72,15 @@ function SidebarLink({ item }: { item: NavItem }) {
   return (
     <Link
       to={item.to}
+      title={collapsed ? item.label : undefined}
       style={{
         position: 'relative',
         display: 'flex',
         minHeight: 38,
         alignItems: 'center',
         gap: 11,
-        padding: '8px 10px 8px 13px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        padding: collapsed ? '8px 0' : '8px 10px 8px 13px',
         borderRadius: 10,
         color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text)',
         background: active ? 'var(--sidebar-active-bg)' : 'transparent',
@@ -98,8 +103,8 @@ function SidebarLink({ item }: { item: NavItem }) {
         />
       )}
       <Icon size={17} strokeWidth={2} style={{ color: active ? 'var(--sidebar-active-text)' : 'var(--sidebar-muted)', flexShrink: 0 }} />
-      <span style={{ flex: 1 }}>{item.label}</span>
-      {item.badge !== undefined && (
+      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+      {!collapsed && item.badge !== undefined && (
         <span
           style={{
             minWidth: 22,
@@ -117,6 +122,12 @@ function SidebarLink({ item }: { item: NavItem }) {
         >
           {item.badge}
         </span>
+      )}
+      {collapsed && item.badge !== undefined && (
+        <span
+          aria-hidden="true"
+          style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 999, background: badgeColor.fg }}
+        />
       )}
     </Link>
   )
@@ -152,6 +163,12 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'User'
   const initials = initialsFor(fullName)
+
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === '1')
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0')
+  }, [collapsed])
 
   const demandCount = useQuery({
     queryKey: ['layout-open-demands-count'],
@@ -266,47 +283,92 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <aside className="desktop-sidebar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '20px 18px 18px' }}>
+      <aside className="desktop-sidebar" style={{ width: collapsed ? 84 : 256, transition: 'width 180ms ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: collapsed ? '20px 0 14px' : '20px 18px 14px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
           <Logo size={38} />
-          <div>
-            <div style={{ color: 'var(--sidebar-fg)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
-            <div style={{ marginTop: 3, color: 'var(--sidebar-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>
-          </div>
+          {!collapsed && (
+            <div>
+              <div style={{ color: 'var(--sidebar-fg)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
+              <div style={{ marginTop: 3, color: 'var(--sidebar-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: collapsed ? '0 12px 12px' : '0 18px 12px' }}>
+          <button
+            type="button"
+            onClick={() => setCollapsed(current => !current)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              width: collapsed ? 36 : '100%',
+              height: 34,
+              margin: collapsed ? '0 auto' : 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              border: '1px solid rgba(255,255,255,.12)',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,.05)',
+              color: 'var(--sidebar-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
+          </button>
         </div>
 
         <div style={{ display: 'flex', flex: 1, flexDirection: 'column', justifyContent: 'space-between', minHeight: 0, padding: '0 12px 14px' }}>
           <nav style={{ display: 'grid', gap: 22, overflowY: 'auto', paddingRight: 2 }}>
             {visibleGroups.map(group => (
               <div key={group.label}>
-                <div style={{ margin: '0 8px 8px', color: 'var(--sidebar-muted)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase' }}>
-                  {group.label}
-                </div>
+                {!collapsed && (
+                  <div style={{ margin: '0 8px 8px', color: 'var(--sidebar-muted)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase' }}>
+                    {group.label}
+                  </div>
+                )}
                 <div style={{ display: 'grid', gap: 3 }}>
-                  {group.items.map(item => <SidebarLink key={item.to} item={item} />)}
+                  {group.items.map(item => <SidebarLink key={item.to} item={item} collapsed={collapsed} />)}
                 </div>
               </div>
             ))}
           </nav>
 
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 16, padding: 10, borderRadius: 12 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-              {initials}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', fontSize: 13.5, fontWeight: 700 }}>
-                {fullName}
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 16, padding: 10, borderRadius: 12, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={() => { void logout() }}
+                aria-label="Log out"
+                title={`${fullName} — Log out`}
+                style={{ width: 34, height: 34, border: 'none', borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0, cursor: 'pointer' }}
+              >
+                {initials}
+              </button>
+            ) : (
+              <div style={{ width: 34, height: 34, borderRadius: 999, display: 'grid', placeItems: 'center', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                {initials}
               </div>
-              <div style={{ color: 'var(--muted)', fontSize: 11.5, fontWeight: 500 }}>{roleLabel(user?.role)}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => { void logout() }}
-              aria-label="Log out"
-              style={{ width: 32, height: 32, border: '1px solid var(--border)', borderRadius: 10, background: '#fff', color: 'var(--muted)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
-            >
-              <LogOut size={16} />
-            </button>
+            )}
+            {!collapsed && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', fontSize: 13.5, fontWeight: 700 }}>
+                  {fullName}
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: 11.5, fontWeight: 500 }}>{roleLabel(user?.role)}</div>
+              </div>
+            )}
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={() => { void logout() }}
+                aria-label="Log out"
+                style={{ width: 32, height: 32, border: '1px solid var(--border)', borderRadius: 10, background: '#fff', color: 'var(--muted)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
+              >
+                <LogOut size={16} />
+              </button>
+            )}
           </div>
         </div>
       </aside>

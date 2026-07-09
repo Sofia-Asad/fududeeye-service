@@ -8,7 +8,9 @@ export function errorMessage(error: unknown) {
     if (status === 403) return 'You do not have permission to do that.'
     if (status === 401) return 'Please sign in again.'
     if (status === 404) return 'That record could not be found.'
-    return status ? `Request failed (${status}).` : 'Request failed.'
+    if (status) return `Request failed (${status}).`
+    // No response at all — the request never reached the server (backend down, offline, CORS).
+    return 'Could not reach the server. Make sure it is running and try again.'
   }
   return 'Request failed.'
 }

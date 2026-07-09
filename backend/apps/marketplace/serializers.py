@@ -62,12 +62,19 @@ class InquirySerializer(serializers.ModelSerializer):
     item_title = serializers.CharField(source='item.title', read_only=True, allow_null=True)
     category_name = serializers.CharField(source='category.name', read_only=True, allow_null=True)
     handled_by_name = serializers.CharField(source='handled_by.get_full_name', read_only=True, allow_null=True)
+    # Listing details for an ITEM_INTEREST lead — sourced from the linked Item, not
+    # duplicated onto Inquiry, so the CRM card can show category/price/owner.
+    item_category_name = serializers.CharField(source='item.category.name', read_only=True, allow_null=True)
+    item_listed_price = serializers.DecimalField(source='item.listed_price', read_only=True, allow_null=True, max_digits=12, decimal_places=2)
+    item_owner_type = serializers.CharField(source='item.owner_type', read_only=True, allow_null=True)
+    item_owner_name = serializers.CharField(source='item.owner.full_name', read_only=True, allow_null=True)
 
     class Meta:
         model = Inquiry
         fields = [
             'id', 'kind', 'full_name', 'phone', 'email', 'message',
             'item', 'item_title', 'item_needed', 'category', 'category_name',
+            'item_category_name', 'item_listed_price', 'item_owner_type', 'item_owner_name',
             'status', 'handled_by', 'handled_by_name', 'staff_notes',
             'created_at', 'updated_at',
         ]

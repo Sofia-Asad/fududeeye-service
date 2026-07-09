@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ClipboardList, Filter, PackageCheck, Plus, Target } from 'lucide-react'
+import { ClipboardList, FileText, Filter, PackageCheck, Plus, Target, Users } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -10,7 +10,7 @@ import { createDemand, listDemands } from '@/api/service'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import EmptyState from '@/components/EmptyState'
-import { Field } from '@/components/FormSection'
+import { CompactTextarea, Field, FormGrid } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
@@ -18,12 +18,16 @@ import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import AccordionCard from '@/components/wizard/AccordionCard'
+import CustomerSelector from '@/components/wizard/CustomerSelector'
 import { errorMessage } from '@/lib/errors'
 import { DEMAND_STATUS_LABELS, DEMAND_STATUSES, formatDate } from '@/lib/service'
 import { notifyError, notifySuccess } from '@/lib/toast'
 import { useEscapeToClose } from '@/lib/useEscapeToClose'
 import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Demand, DemandStatus } from '@/types/service'
+
+type DemandSectionKey = 'customer' | 'info' | 'budget' | 'notes'
 
 type StatusFilter = 'all' | DemandStatus
 
@@ -80,9 +84,14 @@ export default function Demands() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<DemandForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [openSection, setOpenSection] = useState<DemandSectionKey | null>('customer')
 
   useFocusFirstError(errors, formRef)
   useEscapeToClose(modalOpen, () => setModalOpen(false))
+
+  function toggleSection(key: DemandSectionKey) {
+    setOpenSection(current => (current === key ? null : key))
+  }
 
   useEffect(() => {
     setCurrentPage(1)
@@ -116,6 +125,7 @@ export default function Demands() {
       setModalOpen(false)
       setForm(emptyForm)
       setErrors({})
+      setOpenSection('customer')
       void queryClient.invalidateQueries({ queryKey: ['demands'] })
       notifySuccess('Demand created')
       navigate(`/demands/${demand.id}`)
@@ -191,7 +201,7 @@ export default function Demands() {
           title="Demands"
           subtitle="Customer requests waiting for inventory matches."
           actions={(
-            <button type="button" onClick={() => setModalOpen(true)} className="primary-button">
+            <button type="button" onClick={() => { setOpenSection('customer'); setModalOpen(true) }} className="primary-button">
               <Plus size={16} />
               New demand
             </button>
@@ -252,7 +262,7 @@ export default function Demands() {
                   icon={<ClipboardList size={18} />}
                   title="No matching demands."
                   subtitle="No customer requests match the current filters."
-                  action={<button type="button" onClick={() => setModalOpen(true)} className="primary-button"><Plus size={16} />New demand</button>}
+                  action={<button type="button" onClick={() => { setOpenSection('customer'); setModalOpen(true) }} className="primary-button"><Plus size={16} />New demand</button>}
                 />
               )}
             />
@@ -264,7 +274,8 @@ export default function Demands() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="New demand"
-        description="Create a customer request."
+        description="Create a customer request for the matching engine to track."
+        width={640}
         formRef={formRef}
         onSubmit={submit}
         footer={(
@@ -276,44 +287,80 @@ export default function Demands() {
           </>
         )}
       >
-        <Field label="Customer" required error={errors.customer} name="customer">
-          <select autoFocus className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-            <option value="">Choose customer</option>
-            {(customers.data?.results ?? []).map(customer => (
-              <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
-            ))}
-          </select>
-        </Field>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <AccordionCard
+            icon={<Users size={17} />}
+            title="Customer"
+            description="Who is asking for this item?"
+            isOpen={openSection === 'customer'}
+            isDone={!!form.customer}
+            onToggle={() => toggleSection('customer')}
+          >
+            <Field label="Customer" required error={errors.customer} name="customer">
+              <CustomerSelector
+                customers={customers.data?.results ?? []}
+                value={form.customer}
+                onSelect={customer => updateField('customer', String(customer.id))}
+                error={!!errors.customer}
+              />
+            </Field>
+          </AccordionCard>
 
-        <Field label="Title" required error={errors.title} name="title">
-          <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-        </Field>
+          <AccordionCard
+            icon={<ClipboardList size={17} />}
+            title="Demand Information"
+            description="What are they looking for?"
+            isOpen={openSection === 'info'}
+            isDone={!!form.title}
+            onToggle={() => toggleSection('info')}
+          >
+            <Field label="Title" required error={errors.title} name="title">
+              <input className="control" value={form.title} onChange={event => updateField('title', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+            </Field>
+            <Field label="Category" name="category">
+              <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+                <option value="">Any category</option>
+                {(categories.data?.results ?? []).map(nextCategory => (
+                  <option key={nextCategory.id} value={nextCategory.id}>{nextCategory.name}</option>
+                ))}
+              </select>
+            </Field>
+          </AccordionCard>
 
-        <Field label="Category" name="category">
-          <select className="control" value={form.category} onChange={event => updateField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-            <option value="">Any category</option>
-            {(categories.data?.results ?? []).map(nextCategory => (
-              <option key={nextCategory.id} value={nextCategory.id}>{nextCategory.name}</option>
-            ))}
-          </select>
-        </Field>
+          <AccordionCard
+            icon={<Target size={17} />}
+            title="Budget"
+            description="Optional target price range."
+            isOpen={openSection === 'budget'}
+            isDone={Boolean(form.target_price_min || form.target_price_max)}
+            onToggle={() => toggleSection('budget')}
+          >
+            <FormGrid>
+              <Field label="Target min" error={errors.target_price_min} name="target_price_min">
+                <input className="control" value={form.target_price_min} onChange={event => updateField('target_price_min', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Target max" error={errors.target_price_max} name="target_price_max">
+                <input className="control" value={form.target_price_max} onChange={event => updateField('target_price_max', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+            </FormGrid>
+          </AccordionCard>
 
-        <div className="modal-grid-2" style={{ gap: 14 }}>
-          <Field label="Target min" error={errors.target_price_min} name="target_price_min">
-            <input className="control" value={form.target_price_min} onChange={event => updateField('target_price_min', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Target max" error={errors.target_price_max} name="target_price_max">
-            <input className="control" value={form.target_price_max} onChange={event => updateField('target_price_max', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
+          <AccordionCard
+            icon={<FileText size={17} />}
+            title="Additional Notes"
+            description="Optional description and internal notes."
+            isOpen={openSection === 'notes'}
+            isDone={Boolean(form.description || form.notes)}
+            onToggle={() => toggleSection('notes')}
+          >
+            <Field label="Description" name="description">
+              <CompactTextarea value={form.description} onChange={event => updateField('description', event.target.value)} />
+            </Field>
+            <Field label="Notes" name="notes">
+              <CompactTextarea value={form.notes} onChange={event => updateField('notes', event.target.value)} />
+            </Field>
+          </AccordionCard>
         </div>
-
-        <Field label="Description" name="description">
-          <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-        </Field>
-
-        <Field label="Notes" name="notes">
-          <textarea className="control" value={form.notes} onChange={event => updateField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-        </Field>
 
         {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
       </Modal>
