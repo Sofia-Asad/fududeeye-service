@@ -10,7 +10,7 @@ export interface FilterBarProps {
 /** Horizontal, wrapping container for search boxes, selects, and filter buttons. */
 export default function FilterBar({ children, className }: FilterBarProps) {
   return (
-    <div className={cn('flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4', className)}>
+    <div className={cn('flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4 shadow-sm', className)}>
       {children}
     </div>
   )

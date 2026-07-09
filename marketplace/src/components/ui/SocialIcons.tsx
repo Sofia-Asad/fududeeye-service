@@ -42,6 +42,14 @@ export function LinkedInIcon(props: IconProps) {
   )
 }
 
+export function TikTokIcon(props: IconProps) {
+  return (
+    <BrandIcon {...props}>
+      <path d="M16.6 0h-3.3v16.15a3.1 3.1 0 1 1-2.19-2.96V9.8a6.75 6.75 0 1 0 5.79 6.68V8.34a8.28 8.28 0 0 0 4.87 1.56V6.6a4.98 4.98 0 0 1-5.17-4.98V0Z" />
+    </BrandIcon>
+  )
+}
+
 export function GoogleIcon(props: IconProps) {
   return (
     <BrandIcon {...props}>

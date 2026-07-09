@@ -140,7 +140,7 @@ export default function Sales() {
                 <Printer size={16} />
                 Print
               </button>
-              <Link to="/sales/new" className="wizard-gold-button">
+              <Link to="/sales/new" className="primary-button">
                 <Plus size={16} />
                 New sale
               </Link>
@@ -215,7 +215,7 @@ export default function Sales() {
                   icon={<ShoppingCart size={18} />}
                   title="No sales found."
                   subtitle="Record your first sale or adjust the current filters."
-                  action={<Link to="/sales/new" className="wizard-gold-button"><Plus size={16} />New sale</Link>}
+                  action={<Link to="/sales/new" className="primary-button"><Plus size={16} />New sale</Link>}
                 />
               )}
             />

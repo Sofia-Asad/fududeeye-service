@@ -17,6 +17,8 @@ import WhyContactSection from '@/components/contact/WhyContactSection'
 import { useCreateInquiry } from '@/features/inquiries/useCreateInquiry'
 import Container from '@/layout/Container'
 import Section from '@/layout/Section'
+import { getErrorMessage } from '@/lib/errors'
+import { notifyError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 // Same backend contract as before (kind: GENERAL, fullName/phone/email/message) — "Subject"
@@ -48,13 +50,20 @@ export default function Contact() {
   })
 
   async function onSubmit(values: ContactForm) {
-    await mutateAsync({
-      kind: 'GENERAL',
-      fullName: values.fullName,
-      phone: values.phone,
-      email: values.email || undefined,
-      message: `Subject: ${values.subject}\n\n${values.message}`,
-    })
+    try {
+      await mutateAsync({
+        kind: 'GENERAL',
+        fullName: values.fullName,
+        phone: values.phone,
+        email: values.email || undefined,
+        message: `Subject: ${values.subject}\n\n${values.message}`,
+      })
+    } catch (error) {
+      // Without this, a rejected mutateAsync (throttled, network error, backend
+      // validation) throws silently — the button just resets with no feedback,
+      // which is indistinguishable from the form "not submitting" at all.
+      notifyError(getErrorMessage(error, 'Something went wrong sending your message. Please try again in a moment.'))
+    }
   }
 
   return (

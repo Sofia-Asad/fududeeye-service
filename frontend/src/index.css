@@ -550,6 +550,38 @@ textarea.control {
   transform: translateY(-1px);
 }
 
+.gold-outline-button {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  border: 1.5px solid var(--accent-dark);
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 13.5px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(20, 29, 68, .06);
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.gold-outline-button:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(20, 29, 68, .28);
+  transform: translateY(-1px);
+}
+
+.gold-outline-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(20, 29, 68, .12);
+}
+
 .error-banner {
   border: 1px solid #f0c8be;
   border-radius: 12px;
@@ -1015,6 +1047,32 @@ textarea.control {
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, .06);
   background: var(--sidebar-bg);
+  transition: width 260ms cubic-bezier(.4, 0, .2, 1);
+}
+
+.sidebar-toggle-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+  transition: background-color 220ms cubic-bezier(.4, 0, .2, 1), border-color 220ms cubic-bezier(.4, 0, .2, 1), color 200ms ease, transform 120ms ease, box-shadow 200ms ease;
+}
+
+.sidebar-toggle-button:hover {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.sidebar-toggle-button:active {
+  transform: scale(.92);
 }
 
 .app-main {
@@ -1022,6 +1080,20 @@ textarea.control {
   height: 100vh;
   flex: 1;
   overflow: auto;
+}
+
+.desktop-topnav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  height: 66px;
+  padding: 0 28px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  box-shadow: 0 1px 2px rgba(20, 29, 68, .15), 0 4px 14px rgba(242, 183, 5, .2);
 }
 
 .mobile-topbar,
@@ -1037,6 +1109,11 @@ textarea.control {
 
   .sticky-side-panel {
     position: static !important;
+  }
+
+  .desktop-topnav {
+    gap: 10px;
+    padding: 0 18px;
   }
 }
 
@@ -1144,6 +1221,10 @@ textarea.control {
     display: none;
   }
 
+  .desktop-topnav {
+    display: none;
+  }
+
   .app-main {
     height: auto;
     min-height: 100vh;
@@ -1188,6 +1269,7 @@ textarea.control {
 
 @media print {
   .desktop-sidebar,
+  .desktop-topnav,
   .mobile-topbar,
   .mobile-tabbar,
   .no-print {

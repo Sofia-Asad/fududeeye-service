@@ -1,10 +1,9 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 import MainLayout from '@/layout/MainLayout'
 import About from '@/pages/About'
 import BrowseListings from '@/pages/BrowseListings'
 import Contact from '@/pages/Contact'
-import FAQ from '@/pages/FAQ'
 import Home from '@/pages/Home'
 import ListingDetail from '@/pages/ListingDetail'
 import NotFound from '@/pages/NotFound'
@@ -20,7 +19,8 @@ export default function AppRouter() {
         <Route path="/about" element={<About />} />
         <Route path="/services" element={<Services />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/faq" element={<FAQ />} />
+        {/* FAQ was merged into the Services page (see #faq section) — redirect old links/bookmarks. */}
+        <Route path="/faq" element={<Navigate to="/services#faq" replace />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>
