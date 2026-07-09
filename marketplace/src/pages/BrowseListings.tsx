@@ -7,11 +7,11 @@ import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
 import Input from '@/components/ui/Input'
-import PageTitle from '@/components/ui/PageTitle'
 import Pagination from '@/components/ui/Pagination'
 import SearchInput from '@/components/ui/SearchInput'
 import Select from '@/components/ui/Select'
 import { SkeletonCard } from '@/components/ui/Skeleton'
+import ListingsPageHeader from '@/components/listings/ListingsPageHeader'
 import { CONDITION_LABEL } from '@/features/listings/ListingCard'
 import ListingCard from '@/features/listings/ListingCard'
 import { SORT_OPTIONS } from '@/features/listings/placeholderData'
@@ -173,121 +173,123 @@ export default function BrowseListings() {
   )
 
   return (
-    <Container className="py-10">
-      <PageTitle
+    <>
+      <ListingsPageHeader
         eyebrow="Marketplace"
         title="Browse listings"
         subtitle="Search and filter items currently available from Fududeeye."
       />
 
-      <div className="mt-8 grid gap-4">
-        <div className="hidden lg:block">
-          <FilterBar>{filterFields}</FilterBar>
-        </div>
+      <Container className="py-10">
+        <div className="grid gap-4">
+          <div className="hidden lg:block">
+            <FilterBar>{filterFields}</FilterBar>
+          </div>
 
-        <div className="lg:hidden">
-          <button
-            type="button"
-            onClick={mobileFilters.toggle}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink"
-          >
-            <SlidersHorizontal size={16} />
-            {mobileFilters.isOpen ? 'Hide Filters' : 'Filters & Sort'}
-          </button>
-          {mobileFilters.isOpen && (
-            <div className="mt-3">
-              <FilterBar className="flex-col items-stretch">{filterFields}</FilterBar>
+          <div className="lg:hidden">
+            <button
+              type="button"
+              onClick={mobileFilters.toggle}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink"
+            >
+              <SlidersHorizontal size={16} />
+              {mobileFilters.isOpen ? 'Hide Filters' : 'Filters & Sort'}
+            </button>
+            {mobileFilters.isOpen && (
+              <div className="mt-3">
+                <FilterBar className="flex-col items-stretch">{filterFields}</FilterBar>
+              </div>
+            )}
+          </div>
+
+          {activeChips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {activeChips.map(chip => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={chip.onRemove}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary hover:bg-primary/15"
+                >
+                  {chip.label}
+                  <X size={13} aria-hidden="true" />
+                </button>
+              ))}
+              <button type="button" onClick={clearFilters} className="text-xs font-semibold text-ink-muted underline hover:text-ink">
+                Clear all
+              </button>
             </div>
           )}
-        </div>
 
-        {activeChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            {activeChips.map(chip => (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-ink-muted">
+              {listings.data ? `${listings.data.count} listing${listings.data.count === 1 ? '' : 's'} found` : 'Loading…'}
+            </p>
+            <div className="flex gap-1 rounded-lg border border-border-strong bg-surface p-1 shadow-sm">
               <button
-                key={chip.key}
                 type="button"
-                onClick={chip.onRemove}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary hover:bg-primary/15"
+                onClick={() => setView('grid')}
+                aria-label="Grid view"
+                aria-pressed={view === 'grid'}
+                className={cn('grid h-8 w-8 place-items-center rounded-md transition-colors', view === 'grid' ? 'bg-primary text-white' : 'text-ink-muted hover:bg-primary-soft')}
               >
-                {chip.label}
-                <X size={13} aria-hidden="true" />
+                <LayoutGrid size={15} />
               </button>
-            ))}
-            <button type="button" onClick={clearFilters} className="text-xs font-semibold text-ink-muted underline hover:text-ink">
-              Clear all
-            </button>
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                aria-label="List view"
+                aria-pressed={view === 'list'}
+                className={cn('grid h-8 w-8 place-items-center rounded-md transition-colors', view === 'list' ? 'bg-primary text-white' : 'text-ink-muted hover:bg-primary-soft')}
+              >
+                <ListIcon size={15} />
+              </button>
+            </div>
           </div>
-        )}
 
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-ink-muted">
-            {listings.data ? `${listings.data.count} listing${listings.data.count === 1 ? '' : 's'} found` : 'Loading…'}
-          </p>
-          <div className="flex gap-1 rounded-md border border-border-strong p-1">
-            <button
-              type="button"
-              onClick={() => setView('grid')}
-              aria-label="Grid view"
-              aria-pressed={view === 'grid'}
-              className={cn('grid h-8 w-8 place-items-center rounded', view === 'grid' ? 'bg-primary text-white' : 'text-ink-muted')}
-            >
-              <LayoutGrid size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('list')}
-              aria-label="List view"
-              aria-pressed={view === 'list'}
-              className={cn('grid h-8 w-8 place-items-center rounded', view === 'list' ? 'bg-primary text-white' : 'text-ink-muted')}
-            >
-              <ListIcon size={15} />
-            </button>
-          </div>
+          {listings.isLoading && (
+            <div className={cn('grid gap-6', view === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1')}>
+              {Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)}
+            </div>
+          )}
+
+          {listings.isError && (
+            <EmptyState
+              icon={<PackageSearch size={20} />}
+              title="Couldn't load listings"
+              description="Something went wrong reaching the marketplace catalog. Please try again."
+            />
+          )}
+
+          {listings.data && results.length === 0 && (
+            <EmptyState
+              icon={<PackageSearch size={20} />}
+              title="No listings match your filters"
+              description="Try adjusting or clearing your filters to see more results."
+              action={activeChips.length > 0 ? <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button> : undefined}
+            />
+          )}
+
+          {listings.data && results.length > 0 && (
+            <div className={cn('grid animate-fade-in gap-6', view === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1')}>
+              {results.map(listing => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
+
+          {listings.data && results.length > 0 && (
+            <Pagination
+              page={filters.page}
+              total={totalPages}
+              hasPrevious={!!listings.data.previous}
+              hasNext={!!listings.data.next}
+              onPrevious={() => updateFilters({ page: Math.max(1, filters.page - 1) })}
+              onNext={() => updateFilters({ page: filters.page + 1 })}
+            />
+          )}
         </div>
-
-        {listings.isLoading && (
-          <div className={cn('grid gap-6', view === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1')}>
-            {Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)}
-          </div>
-        )}
-
-        {listings.isError && (
-          <EmptyState
-            icon={<PackageSearch size={20} />}
-            title="Couldn't load listings"
-            description="Something went wrong reaching the marketplace catalog. Please try again."
-          />
-        )}
-
-        {listings.data && results.length === 0 && (
-          <EmptyState
-            icon={<PackageSearch size={20} />}
-            title="No listings match your filters"
-            description="Try adjusting or clearing your filters to see more results."
-            action={activeChips.length > 0 ? <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button> : undefined}
-          />
-        )}
-
-        {listings.data && results.length > 0 && (
-          <div className={cn('grid gap-6', view === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1')}>
-            {results.map(listing => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-        )}
-
-        {listings.data && results.length > 0 && (
-          <Pagination
-            page={filters.page}
-            total={totalPages}
-            hasPrevious={!!listings.data.previous}
-            hasNext={!!listings.data.next}
-            onPrevious={() => updateFilters({ page: Math.max(1, filters.page - 1) })}
-            onNext={() => updateFilters({ page: filters.page + 1 })}
-          />
-        )}
-      </div>
-    </Container>
+      </Container>
+    </>
   )
 }

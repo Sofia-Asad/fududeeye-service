@@ -2,7 +2,7 @@ import { Clock, Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import Logo from '@/components/Logo'
-import { FacebookIcon, InstagramIcon, LinkedInIcon, XIcon } from '@/components/ui/SocialIcons'
+import { FacebookIcon, TikTokIcon } from '@/components/ui/SocialIcons'
 import {
   CONTACT_INFO,
   CRM_LOGIN_URL,
@@ -10,16 +10,15 @@ import {
   FOOTER_SUPPORT_LINKS,
   SITE_NAME,
   SITE_TAGLINE,
+  SOCIAL_LINKS,
 } from '@/constants/nav'
 import { useCategoriesQuery } from '@/features/listings/queries'
 import Container from '@/layout/Container'
 
-const SOCIAL_LINKS = [
-  { label: 'Facebook', href: '#', icon: FacebookIcon },
-  { label: 'Instagram', href: '#', icon: InstagramIcon },
-  { label: 'LinkedIn', href: '#', icon: LinkedInIcon },
-  { label: 'X', href: '#', icon: XIcon },
-]
+const SOCIAL_ICONS: Record<string, typeof FacebookIcon> = {
+  Facebook: FacebookIcon,
+  TikTok: TikTokIcon,
+}
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -37,19 +36,23 @@ export default function Footer() {
           <p className="mt-3 text-sm font-semibold text-white/80">{CONTACT_INFO.companyName}</p>
           <p className="mt-2 max-w-xs text-sm text-white/60">{SITE_TAGLINE}</p>
           <ul className="mt-6 flex gap-3">
-            {SOCIAL_LINKS.map(social => (
-              <li key={social.label}>
-                <a
-                  href={social.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  aria-label={social.label}
-                  className="grid h-9 w-9 place-items-center rounded-md bg-white/10 text-white/70 transition-colors hover:bg-gold hover:text-ink"
-                >
-                  <social.icon />
-                </a>
-              </li>
-            ))}
+            {SOCIAL_LINKS.map(social => {
+              const Icon = SOCIAL_ICONS[social.label]
+              if (!Icon) return null
+              return (
+                <li key={social.label}>
+                  <a
+                    href={social.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    aria-label={social.label}
+                    className="grid h-9 w-9 place-items-center rounded-md bg-white/10 text-white/70 transition-colors hover:bg-gold hover:text-ink"
+                  >
+                    <Icon />
+                  </a>
+                </li>
+              )
+            })}
           </ul>
         </div>
 
@@ -102,10 +105,7 @@ export default function Footer() {
           <ul className="mt-4 grid gap-3 text-sm text-white/70">
             <li className="flex items-start gap-2.5">
               <Mail size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-gold" />
-              <span className="grid gap-0.5">
-                <a href={`mailto:${CONTACT_INFO.generalEmail}`} className="hover:text-gold">{CONTACT_INFO.generalEmail}</a>
-                <a href={`mailto:${CONTACT_INFO.supportEmail}`} className="hover:text-gold">{CONTACT_INFO.supportEmail}</a>
-              </span>
+              <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-gold">{CONTACT_INFO.email}</a>
             </li>
             <li className="flex items-start gap-2.5">
               <Phone size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-gold" />

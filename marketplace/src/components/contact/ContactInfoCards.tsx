@@ -29,12 +29,7 @@ const CARDS: { icon: typeof Phone; tone: IconTone; title: string; value: ReactNo
     icon: Mail,
     tone: 'info',
     title: 'Email Address',
-    value: (
-      <div className="grid gap-0.5">
-        <a href={`mailto:${CONTACT_INFO.supportEmail}`} className="hover:text-primary">{CONTACT_INFO.supportEmail}</a>
-        <a href={`mailto:${CONTACT_INFO.generalEmail}`} className="hover:text-primary">{CONTACT_INFO.generalEmail}</a>
-      </div>
-    ),
+    value: <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-primary">{CONTACT_INFO.email}</a>,
   },
   {
     icon: MapPin,

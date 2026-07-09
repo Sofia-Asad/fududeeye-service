@@ -3,8 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Bell,
   ChartLine,
-  ChevronsLeft,
-  ChevronsRight,
   ClipboardList,
   CreditCard,
   HandCoins,
@@ -28,6 +26,10 @@ import { listInquiries } from '@/api/inquiries'
 import { listComplaints, listDemands } from '@/api/service'
 import { useAuth } from '@/auth/AuthContext'
 import Logo from '@/components/Logo'
+import SidebarToggle from '@/components/sidebar/SidebarToggle'
+import TopNav from '@/components/topnav/TopNav'
+import type { NotificationItem } from '@/components/topnav/NotificationsMenu'
+import { initialsFor, roleLabel } from '@/lib/format'
 import type { Role } from '@/types/auth'
 
 interface NavItem {
@@ -44,21 +46,6 @@ interface NavGroup {
   label: string
   items: NavItem[]
   hiddenFor?: Role[]
-}
-
-function roleLabel(role?: Role) {
-  if (!role) return 'Staff'
-  return role.toLowerCase().replace(/^\w/, char => char.toUpperCase())
-}
-
-function initialsFor(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
 }
 
 function SidebarLink({ item, collapsed = false }: { item: NavItem; collapsed?: boolean }) {
@@ -189,6 +176,12 @@ export default function Layout({ children }: { children: ReactNode }) {
     staleTime: 60_000,
   })
 
+  const notifications: NotificationItem[] = [
+    { label: 'Open demands', count: demandCount.data?.count ?? 0, to: '/demands', tone: 'primary' },
+    { label: 'Open complaints', count: complaintCount.data?.count ?? 0, to: '/complaints', tone: 'danger' },
+    { label: 'New inquiries', count: inquiryCount.data?.count ?? 0, to: '/inquiries', tone: 'primary' },
+  ]
+
   const groups: NavGroup[] = [
     {
       label: 'Overview',
@@ -283,40 +276,27 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <aside className="desktop-sidebar" style={{ width: collapsed ? 84 : 256, transition: 'width 180ms ease' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: collapsed ? '20px 0 14px' : '20px 18px 14px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-          <Logo size={38} />
-          {!collapsed && (
-            <div>
-              <div style={{ color: 'var(--sidebar-fg)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
-              <div style={{ marginTop: 3, color: 'var(--sidebar-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>
-            </div>
-          )}
-        </div>
-
-        <div style={{ padding: collapsed ? '0 12px 12px' : '0 18px 12px' }}>
-          <button
-            type="button"
-            onClick={() => setCollapsed(current => !current)}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={{
-              width: collapsed ? 36 : '100%',
-              height: 34,
-              margin: collapsed ? '0 auto' : 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              border: '1px solid rgba(255,255,255,.12)',
-              borderRadius: 10,
-              background: 'rgba(255,255,255,.05)',
-              color: 'var(--sidebar-muted)',
-              cursor: 'pointer',
-            }}
-          >
-            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-          </button>
+      <aside className="desktop-sidebar" style={{ width: collapsed ? 84 : 256 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: collapsed ? '18px 12px 14px' : '18px 14px 14px 18px',
+            flexDirection: collapsed ? 'column' : 'row',
+            justifyContent: collapsed ? 'center' : 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <Logo size={collapsed ? 34 : 38} />
+            {!collapsed && (
+              <div>
+                <div style={{ color: 'var(--sidebar-fg)', fontSize: 17, fontWeight: 700, lineHeight: 1.08 }}>Fududeeye</div>
+                <div style={{ marginTop: 3, color: 'var(--sidebar-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '.16em' }}>BROKERAGE CRM</div>
+              </div>
+            )}
+          </div>
+          <SidebarToggle collapsed={collapsed} onToggle={() => setCollapsed(current => !current)} />
         </div>
 
         <div style={{ display: 'flex', flex: 1, flexDirection: 'column', justifyContent: 'space-between', minHeight: 0, padding: '0 12px 14px' }}>
@@ -373,7 +353,16 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="app-main">{children}</main>
+      <main className="app-main">
+        <TopNav
+          notifications={notifications}
+          fullName={fullName}
+          role={user?.role}
+          userId={user?.id}
+          onLogout={() => { void logout() }}
+        />
+        {children}
+      </main>
 
       <nav className="mobile-tabbar" aria-label="Primary navigation">
         <MobileTab to="/" end label="Home" icon={Home} />

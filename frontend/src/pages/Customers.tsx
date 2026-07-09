@@ -109,7 +109,7 @@ export default function Customers() {
           title="Customers"
           subtitle="Buyers, sellers, and consignment owners in one directory."
           actions={(
-            <Link to="/customers/new" className="wizard-gold-button">
+            <Link to="/customers/new" className="primary-button">
               <Plus size={16} />
               New customer
             </Link>
@@ -163,7 +163,7 @@ export default function Customers() {
                   icon={<UsersRound size={18} />}
                   title="No customers yet."
                   subtitle="Create your first customer to start tracking buyers and sellers."
-                  action={<Link to="/customers/new" className="wizard-gold-button"><Plus size={16} />New customer</Link>}
+                  action={<Link to="/customers/new" className="primary-button"><Plus size={16} />New customer</Link>}
                 />
               )}
             />

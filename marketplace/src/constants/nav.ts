@@ -11,7 +11,6 @@ export const PRIMARY_NAV_LINKS: NavLink[] = [
   { to: '/listings', label: 'Browse Listings' },
   { to: '/services', label: 'Services' },
   { to: '/about', label: 'About' },
-  { to: '/faq', label: 'FAQ' },
   { to: '/contact', label: 'Contact' },
 ]
 
@@ -22,14 +21,13 @@ export const FOOTER_QUICK_LINKS: NavLink[] = [
 ]
 
 export const FOOTER_SUPPORT_LINKS: NavLink[] = [
-  { to: '/faq', label: 'FAQ' },
+  { to: '/services#faq', label: 'FAQ' },
   { to: '/contact', label: 'Contact Us' },
 ]
 
 export const CONTACT_INFO = {
   companyName: 'Fududeeye Brokerage & Marketplace',
-  supportEmail: 'support@fududeeye.com',
-  generalEmail: 'hello@fududeeye.com',
+  email: 'fududeeyedemo@gmail.com',
   phones: ['+252 61 800 000', '+252 90 800 000'],
   addressLines: ['Garsoor District', 'Galkayo', 'Mudug', 'Somalia'],
   workingHours: [
@@ -38,6 +36,11 @@ export const CONTACT_INFO = {
   ],
   averageResponse: 'Within 30 Minutes',
 }
+
+export const SOCIAL_LINKS = [
+  { label: 'Facebook', href: 'https://www.facebook.com/fududeeyeservices' },
+  { label: 'TikTok', href: 'https://www.tiktok.com/@fududeeyeservice' },
+]
 
 /**
  * Internal CRM (frontend/), served under /crm/ at this same origin — proxied to its

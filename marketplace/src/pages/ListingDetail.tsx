@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ImageOff, MapPin, MessageCircle, MessageSquareText, PackageSearch, Tag } from 'lucide-react'
+import { CalendarDays, ImageOff, MapPin, MessageCircle, MessageSquareText, PackageSearch, ShieldCheck, Tag } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 
 import Badge from '@/components/ui/Badge'
@@ -63,125 +63,138 @@ export default function ListingDetail() {
   const relatedListings = (related.data?.results ?? []).filter(item => item.id !== current.id).slice(0, 4)
 
   return (
-    <Container className="py-10">
-      <Breadcrumb items={[{ label: 'Browse listings', to: '/listings' }, { label: current.title }]} />
+    <>
+      <div className="border-b border-border bg-surface py-4">
+        <Container>
+          <Breadcrumb items={[{ label: 'Browse listings', to: '/listings' }, { label: current.title }]} />
+        </Container>
+      </div>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
-            {activeImage ? (
-              <img src={activeImage.url} alt={current.title} className="aspect-[4/3] w-full object-cover" />
-            ) : (
-              <div className="grid aspect-[4/3] w-full place-items-center bg-primary-soft text-ink-faint">
-                <ImageOff size={40} aria-hidden="true" />
+      <Container className="py-10">
+        <div className="grid animate-fade-in gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-md">
+              {activeImage ? (
+                <img src={activeImage.url} alt={current.title} className="aspect-[4/3] w-full object-cover" />
+              ) : (
+                <div className="grid aspect-[4/3] w-full place-items-center bg-primary-soft text-ink-faint">
+                  <ImageOff size={40} aria-hidden="true" />
+                </div>
+              )}
+            </div>
+
+            {images.length > 1 && (
+              <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-6">
+                {images.map((image, index) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    onClick={() => setActiveImageIndex(index)}
+                    className={cn(
+                      'aspect-square overflow-hidden rounded-md border-2 transition-colors',
+                      index === activeImageIndex ? 'border-primary' : 'border-transparent hover:border-border-strong',
+                    )}
+                  >
+                    <img src={image.url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-10">
+              <h2 className="font-serif text-xl font-semibold text-ink">Description</h2>
+              <p className="mt-3 leading-relaxed text-ink-muted">{current.description || 'No description provided.'}</p>
+            </div>
+
+            {current.attributes.length > 0 && (
+              <div className="mt-8">
+                <h2 className="font-serif text-xl font-semibold text-ink">Specifications</h2>
+                <dl className="mt-3 grid gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-5 shadow-sm sm:grid-cols-2">
+                  {current.attributes.map(spec => (
+                    <div key={spec.label} className="flex justify-between gap-4 text-sm sm:justify-start">
+                      <dt className="font-medium text-ink-muted">{spec.label}</dt>
+                      <dd className="text-ink">{spec.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
+            {relatedListings.length > 0 && (
+              <div className="mt-10">
+                <h2 className="font-serif text-xl font-semibold text-ink">Related listings</h2>
+                <div className="mt-4 grid gap-6 sm:grid-cols-2">
+                  {relatedListings.map(item => (
+                    <ListingCard key={item.id} listing={item} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {images.length > 1 && (
-            <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-6">
-              {images.map((image, index) => (
-                <button
-                  key={image.id}
-                  type="button"
-                  onClick={() => setActiveImageIndex(index)}
-                  className={cn(
-                    'aspect-square overflow-hidden rounded-md border-2',
-                    index === activeImageIndex ? 'border-primary' : 'border-transparent',
-                  )}
-                >
-                  <img src={image.url} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-8">
-            <h2 className="font-serif text-xl font-semibold text-ink">Description</h2>
-            <p className="mt-3 leading-relaxed text-ink-muted">{current.description || 'No description provided.'}</p>
-          </div>
-
-          {current.attributes.length > 0 && (
-            <div className="mt-8">
-              <h2 className="font-serif text-xl font-semibold text-ink">Specifications</h2>
-              <dl className="mt-3 grid gap-x-6 gap-y-3 rounded-lg border border-border bg-surface p-5 sm:grid-cols-2">
-                {current.attributes.map(spec => (
-                  <div key={spec.label} className="flex justify-between gap-4 text-sm sm:justify-start">
-                    <dt className="font-medium text-ink-muted">{spec.label}</dt>
-                    <dd className="text-ink">{spec.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-
-          {relatedListings.length > 0 && (
-            <div className="mt-10">
-              <h2 className="font-serif text-xl font-semibold text-ink">Related listings</h2>
-              <div className="mt-4 grid gap-6 sm:grid-cols-2">
-                {relatedListings.map(item => (
-                  <ListingCard key={item.id} listing={item} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="lg:sticky lg:top-24 lg:self-start">
-          <Card>
-            <CardContent className="grid gap-4">
-              <div className="flex items-center gap-2">
-                <Badge variant={CONDITION_VARIANT[current.condition]}>{CONDITION_LABEL[current.condition]}</Badge>
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
-                  <Tag size={12} aria-hidden="true" />
-                  {current.categoryName}
-                </span>
-              </div>
-
-              <h1 className="font-serif text-2xl font-semibold text-ink">{current.title}</h1>
-              <p className="font-serif text-3xl font-semibold text-primary">{formatCurrency(current.price)}</p>
-
-              <div className="grid gap-1.5 text-sm text-ink-muted">
-                {current.location && (
-                  <span className="flex items-center gap-1.5">
-                    <MapPin size={14} aria-hidden="true" />
-                    {current.location}
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <Card className="overflow-hidden rounded-xl border-t-4 border-t-gold shadow-lg">
+              <CardContent className="grid gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={CONDITION_VARIANT[current.condition]}>{CONDITION_LABEL[current.condition]}</Badge>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+                    <Tag size={12} aria-hidden="true" />
+                    {current.categoryName}
                   </span>
-                )}
-                <span>Posted {formatDate(current.createdAt)}</span>
-              </div>
-
-              <a
-                href={buildWhatsAppUrl(whatsAppMessage)}
-                target="_blank"
-                rel="noreferrer noopener"
-                className={cn(buttonVariants({ size: 'lg' }), 'mt-2 w-full')}
-              >
-                <MessageCircle size={18} />
-                Chat on WhatsApp
-              </a>
-              <p className="text-center text-xs text-ink-faint">
-                Opens WhatsApp with this item&rsquo;s details pre-filled.
-              </p>
-
-              {contactForm.isOpen ? (
-                <div className="mt-2 border-t border-border pt-4">
-                  <ContactSellerForm itemId={String(current.id)} />
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+                    <ShieldCheck size={12} aria-hidden="true" />
+                    Verified
+                  </span>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={contactForm.open}
-                  className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'mt-1 w-full')}
+
+                <h1 className="font-serif text-2xl font-semibold text-ink">{current.title}</h1>
+                <p className="font-serif text-3xl font-semibold text-primary">{formatCurrency(current.price)}</p>
+
+                <div className="grid gap-1.5 text-sm text-ink-muted">
+                  {current.location && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin size={14} aria-hidden="true" />
+                      {current.location}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays size={14} aria-hidden="true" />
+                    Posted {formatDate(current.createdAt)}
+                  </span>
+                </div>
+
+                <a
+                  href={buildWhatsAppUrl(whatsAppMessage)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className={cn(buttonVariants({ size: 'lg' }), 'mt-2 w-full')}
                 >
-                  <MessageSquareText size={15} />
-                  Send a Message Instead
-                </button>
-              )}
-            </CardContent>
-          </Card>
+                  <MessageCircle size={18} />
+                  Chat on WhatsApp
+                </a>
+                <p className="text-center text-xs text-ink-faint">
+                  Opens WhatsApp with this item&rsquo;s details pre-filled.
+                </p>
+
+                {contactForm.isOpen ? (
+                  <div className="mt-2 border-t border-border pt-4">
+                    <ContactSellerForm itemId={String(current.id)} />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={contactForm.open}
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'mt-1 w-full')}
+                  >
+                    <MessageSquareText size={15} />
+                    Send a Message Instead
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
-    </Container>
+      </Container>
+    </>
   )
 }
