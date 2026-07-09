@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Filter, MessageCircleQuestion, PackageSearch, Tag } from 'lucide-react'
+import { Filter, Globe, MessageCircleQuestion, PackageSearch, Tag } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 
 import { listInquiries } from '@/api/inquiries'
@@ -69,6 +69,16 @@ export default function Inquiries() {
       render: inquiry => inquiry.item
         ? <Link to={`/items/${inquiry.item}`} style={{ color: 'var(--primary-hover)', fontWeight: 600 }}>{inquiry.item_title}</Link>
         : (inquiry.item_needed || '-'),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      render: () => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)' }}>
+          <Globe size={11} />
+          Website
+        </span>
+      ),
     },
     { key: 'status', header: 'Status', render: inquiry => <StatusBadge status={inquiry.status} /> },
     { key: 'handled_by', header: 'Handled by', render: inquiry => inquiry.handled_by_name || '-' },

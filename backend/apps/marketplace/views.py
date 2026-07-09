@@ -18,6 +18,7 @@ from .serializers import (
     PublicCategorySerializer,
     PublicItemSerializer,
 )
+from .throttles import InquiryCreateThrottle
 
 
 class PublicItemFilterSet(django_filters.FilterSet):
@@ -79,6 +80,11 @@ class InquiryViewSet(viewsets.ModelViewSet):
         if self.action == 'destroy':
             return [IsAuthenticated(), DenyDeleteUnlessAdmin()]
         return [IsAuthenticated()]
+
+    def get_throttles(self):
+        if self.action == 'create':
+            return [InquiryCreateThrottle()]
+        return []
 
     @action(detail=True, methods=['post'], url_path='convert')
     def convert(self, request, pk=None):

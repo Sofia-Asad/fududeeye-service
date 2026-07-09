@@ -8,6 +8,9 @@ class User(AbstractUser):
         MANAGER = 'MANAGER', 'Manager'
         SALES = 'SALES', 'Sales Staff'
 
+    # Overrides AbstractUser's blank, non-unique email — staff log in and
+    # receive password-reset links by email, so it must uniquely identify one account.
+    email = models.EmailField('email address', unique=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.SALES)
     phone = models.CharField(max_length=30, blank=True)
     is_active_staff = models.BooleanField(default=True)

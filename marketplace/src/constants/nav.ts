@@ -24,13 +24,19 @@ export const FOOTER_QUICK_LINKS: NavLink[] = [
 export const FOOTER_SUPPORT_LINKS: NavLink[] = [
   { to: '/faq', label: 'FAQ' },
   { to: '/contact', label: 'Contact Us' },
-  { to: '/login', label: 'Staff Login' },
 ]
 
 export const CONTACT_INFO = {
-  email: 'hello@fududeeye.com',
-  phone: '+252 61 800 0000',
-  address: 'KM4, Mogadishu, Somalia',
+  companyName: 'Fududeeye Brokerage & Marketplace',
+  supportEmail: 'support@fududeeye.com',
+  generalEmail: 'hello@fududeeye.com',
+  phones: ['+252 61 800 000', '+252 90 800 000'],
+  addressLines: ['Garsoor District', 'Galkayo', 'Mudug', 'Somalia'],
+  workingHours: [
+    { days: 'Saturday – Thursday', hours: '8:00 AM – 6:00 PM' },
+    { days: 'Friday', hours: 'Closed' },
+  ],
+  averageResponse: 'Within 30 Minutes',
 }
 
 /**
@@ -39,3 +45,6 @@ export const CONTACT_INFO = {
  * production. Staff are sent here after signing in on the public site.
  */
 export const CRM_URL = import.meta.env.VITE_CRM_URL ?? '/crm/'
+
+/** Where the "Staff Login" button sends visitors — the CRM has the only login page in the system. */
+export const CRM_LOGIN_URL = `${CRM_URL}login`

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AlertTriangle, Filter, MessageSquareWarning, Plus, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, FileText, Filter, MessageSquareWarning, Plus, ShieldAlert, Users } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -11,13 +11,16 @@ import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import EmptyState from '@/components/EmptyState'
-import { Field } from '@/components/FormSection'
+import { CompactTextarea, Field, SegmentedControl } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import AccordionCard from '@/components/wizard/AccordionCard'
+import CustomerSelector from '@/components/wizard/CustomerSelector'
+import SearchableSelect from '@/components/wizard/SearchableSelect'
 import { errorMessage } from '@/lib/errors'
 import {
   COMPLAINT_PRIORITIES,
@@ -33,6 +36,7 @@ import type { Complaint, ComplaintPriority, ComplaintStatus } from '@/types/serv
 
 type StatusFilter = 'all' | ComplaintStatus
 type PriorityFilter = 'all' | ComplaintPriority
+type ComplaintSectionKey = 'customer' | 'details' | 'priority' | 'description'
 
 const complaintSchema = z.object({
   customer: z.string().trim().min(1, 'Customer is required.'),
@@ -64,9 +68,14 @@ export default function Complaints() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<ComplaintForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [openSection, setOpenSection] = useState<ComplaintSectionKey | null>('customer')
 
   useFocusFirstError(errors, formRef)
   useEscapeToClose(modalOpen, () => setModalOpen(false))
+
+  function toggleSection(key: ComplaintSectionKey) {
+    setOpenSection(current => (current === key ? null : key))
+  }
 
   useEffect(() => {
     setCurrentPage(1)
@@ -101,6 +110,7 @@ export default function Complaints() {
       setModalOpen(false)
       setForm(emptyForm)
       setErrors({})
+      setOpenSection('customer')
       void queryClient.invalidateQueries({ queryKey: ['complaints'] })
       notifySuccess('Complaint created')
       navigate(`/complaints/${complaint.id}`)
@@ -174,7 +184,7 @@ export default function Complaints() {
           title="Complaints"
           subtitle="Customer issues, priorities, assignments, and resolution progress."
           actions={(
-            <button type="button" onClick={() => setModalOpen(true)} className="primary-button">
+            <button type="button" onClick={() => { setOpenSection('customer'); setModalOpen(true) }} className="primary-button">
               <Plus size={16} />
               New complaint
             </button>
@@ -235,7 +245,7 @@ export default function Complaints() {
                   icon={<MessageSquareWarning size={18} />}
                   title="No complaints found."
                   subtitle="No customer issues match the current filters."
-                  action={<button type="button" onClick={() => setModalOpen(true)} className="primary-button"><Plus size={16} />New complaint</button>}
+                  action={<button type="button" onClick={() => { setOpenSection('customer'); setModalOpen(true) }} className="primary-button"><Plus size={16} />New complaint</button>}
                 />
               )}
             />
@@ -247,7 +257,8 @@ export default function Complaints() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="New complaint"
-        description="Create a customer ticket."
+        description="Create a customer support ticket."
+        width={640}
         formRef={formRef}
         onSubmit={submit}
         footer={(
@@ -259,40 +270,85 @@ export default function Complaints() {
           </>
         )}
       >
-        <Field label="Customer" required error={errors.customer} name="customer">
-          <select autoFocus className="control" value={form.customer} onChange={event => updateField('customer', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-            <option value="">Choose customer</option>
-            {(customers.data?.results ?? []).map(customer => (
-              <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
-            ))}
-          </select>
-        </Field>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <AccordionCard
+            icon={<Users size={17} />}
+            title="Customer"
+            description="Who is this ticket for?"
+            isOpen={openSection === 'customer'}
+            isDone={!!form.customer}
+            onToggle={() => toggleSection('customer')}
+          >
+            <Field label="Customer" required error={errors.customer} name="customer">
+              <CustomerSelector
+                customers={customers.data?.results ?? []}
+                value={form.customer}
+                onSelect={customer => updateField('customer', String(customer.id))}
+                error={!!errors.customer}
+              />
+            </Field>
+          </AccordionCard>
 
-        <Field label="Related sale" name="related_sale">
-          <select className="control" value={form.related_sale} onChange={event => updateField('related_sale', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-            <option value="">No related sale</option>
-            {(sales.data?.results ?? []).map(sale => (
-              <option key={sale.id} value={sale.id}>Sale #{sale.id} - {sale.item_title} - {sale.buyer_name}</option>
-            ))}
-          </select>
-        </Field>
+          <AccordionCard
+            icon={<MessageSquareWarning size={17} />}
+            title="Complaint Details"
+            description="Subject and any related sale."
+            isOpen={openSection === 'details'}
+            isDone={!!form.subject}
+            onToggle={() => toggleSection('details')}
+          >
+            <Field label="Subject" required error={errors.subject} name="subject">
+              <input className="control" value={form.subject} onChange={event => updateField('subject', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+            </Field>
+            <Field label="Related sale" name="related_sale">
+              <SearchableSelect
+                options={sales.data?.results ?? []}
+                value={form.related_sale}
+                getId={sale => String(sale.id)}
+                getLabel={sale => `Sale #${sale.id} - ${sale.item_title} - ${sale.buyer_name}`}
+                renderOption={sale => (
+                  <span>
+                    <strong style={{ display: 'block', fontSize: 13 }}>Sale #{sale.id} — {sale.item_title}</strong>
+                    <span style={{ color: 'var(--muted)', fontSize: 11.5 }}>{sale.buyer_name}</span>
+                  </span>
+                )}
+                onSelect={sale => updateField('related_sale', String(sale.id))}
+                placeholder="No related sale"
+                emptyLabel="No sales found."
+              />
+            </Field>
+          </AccordionCard>
 
-        <div className="modal-grid-2" style={{ gridTemplateColumns: 'minmax(0, 1fr) 180px', gap: 14 }}>
-          <Field label="Subject" required error={errors.subject} name="subject">
-            <input className="control" value={form.subject} onChange={event => updateField('subject', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Priority" name="priority">
-            <select className="control" value={form.priority} onChange={event => updateField('priority', event.target.value as ComplaintPriority)} style={{ width: '100%', padding: '0 12px' }}>
-              {COMPLAINT_PRIORITIES.map(nextPriority => (
-                <option key={nextPriority} value={nextPriority}>{COMPLAINT_PRIORITY_LABELS[nextPriority]}</option>
-              ))}
-            </select>
-          </Field>
+          <AccordionCard
+            icon={<ShieldAlert size={17} />}
+            title="Priority"
+            description="How urgent is this issue?"
+            isOpen={openSection === 'priority'}
+            isDone
+            onToggle={() => toggleSection('priority')}
+          >
+            <Field label="Priority" name="priority">
+              <SegmentedControl
+                value={form.priority}
+                options={COMPLAINT_PRIORITIES.map(nextPriority => ({ value: nextPriority, label: COMPLAINT_PRIORITY_LABELS[nextPriority] }))}
+                onChange={value => updateField('priority', value as ComplaintPriority)}
+              />
+            </Field>
+          </AccordionCard>
+
+          <AccordionCard
+            icon={<FileText size={17} />}
+            title="Description"
+            description="What happened, in detail."
+            isOpen={openSection === 'description'}
+            isDone={!!form.description}
+            onToggle={() => toggleSection('description')}
+          >
+            <Field label="Description" required error={errors.description} name="description">
+              <CompactTextarea rows={3} value={form.description} onChange={event => updateField('description', event.target.value)} />
+            </Field>
+          </AccordionCard>
         </div>
-
-        <Field label="Description" required error={errors.description} name="description">
-          <textarea className="control" value={form.description} onChange={event => updateField('description', event.target.value)} rows={4} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-        </Field>
 
         {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
       </Modal>

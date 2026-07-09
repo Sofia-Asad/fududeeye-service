@@ -16,14 +16,14 @@ def client():
 @pytest.fixture
 def admin_user(db):
     return User.objects.create_user(
-        username='admin_test', password='pass', role='ADMIN'
+        username='admin_test', password='pass', role='ADMIN', email='admin_test@fududeeye.local'
     )
 
 
 @pytest.fixture
 def sales_user(db):
     return User.objects.create_user(
-        username='sales_test', password='pass', role='SALES'
+        username='sales_test', password='pass', role='SALES', email='sales_test@fududeeye.local'
     )
 
 
@@ -96,6 +96,30 @@ def test_sales_user_cannot_delete(client, sales_user):
     client.force_authenticate(user=sales_user)
     resp = client.delete(f'/api/v1/customers/{c.pk}/')
     assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_admin_can_delete_customer_with_no_history(client, admin_user):
+    c = Customer.objects.create(full_name='No History', phone='888')
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/customers/{c.pk}/')
+    assert resp.status_code == 204
+    assert not Customer.objects.filter(pk=c.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_cannot_delete_customer_with_related_records(client, admin_user):
+    from apps.demands.models import Demand
+
+    c = Customer.objects.create(full_name='Has Demand', phone='777')
+    Demand.objects.create(customer=c, title='Wants a laptop')
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/customers/{c.pk}/')
+
+    assert resp.status_code == 400
+    assert 'cannot be deleted' in resp.data['detail']
+    assert Customer.objects.filter(pk=c.pk).exists()
 
 
 # --- business rule: edit permissions ---

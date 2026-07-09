@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Filter, Plus, ShieldCheck, UserCog, UsersRound } from 'lucide-react'
+import { Filter, IdCard, KeyRound, Plus, ShieldCheck, UserCog, UsersRound } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -9,7 +9,7 @@ import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import EmptyState from '@/components/EmptyState'
-import { Field } from '@/components/FormSection'
+import { Field, FormGrid, SegmentedControl } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
@@ -17,11 +17,14 @@ import PaginationFooter from '@/components/PaginationFooter'
 import PermissionGate from '@/components/PermissionGate'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import AccordionCard from '@/components/wizard/AccordionCard'
 import { formErrorMessage, errorMessage } from '@/lib/errors'
 import { initials } from '@/lib/sales'
 import { notifyError, notifySuccess } from '@/lib/toast'
 import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import type { Role, User } from '@/types/auth'
+
+type UserSectionKey = 'account' | 'personal' | 'permissions'
 
 const ROLE_LABELS: Record<Role, string> = {
   ADMIN: 'Admin',
@@ -84,8 +87,13 @@ export default function Users() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<CreateUserForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [openSection, setOpenSection] = useState<UserSectionKey | null>('account')
 
   useFocusFirstError(errors, formRef)
+
+  function toggleSection(key: UserSectionKey) {
+    setOpenSection(current => (current === key ? null : key))
+  }
 
   useEffect(() => {
     setCurrentPage(1)
@@ -107,6 +115,7 @@ export default function Users() {
       setModalOpen(false)
       setForm(emptyForm)
       setErrors({})
+      setOpenSection('account')
       void queryClient.invalidateQueries({ queryKey: ['users'] })
       notifySuccess('User created')
     },
@@ -198,7 +207,7 @@ export default function Users() {
                   <ShieldCheck size={16} />
                   Django admin
                 </a>
-                <button type="button" onClick={() => setModalOpen(true)} className="primary-button">
+                <button type="button" onClick={() => { setOpenSection('account'); setModalOpen(true) }} className="primary-button">
                   <Plus size={16} />
                   New user
                 </button>
@@ -261,7 +270,7 @@ export default function Users() {
         onClose={() => setModalOpen(false)}
         title="New user"
         description="Create a staff account."
-        width={520}
+        width={640}
         formRef={formRef}
         onSubmit={submit}
         footer={(
@@ -273,37 +282,68 @@ export default function Users() {
           </>
         )}
       >
-        <div className="modal-grid-2" style={{ gap: 14 }}>
-          <Field label="Username" required error={errors.username} name="username">
-            <input autoFocus className="control" value={form.username} onChange={event => updateField('username', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Password" required error={errors.password} name="password">
-            <input className="control" type="password" value={form.password} onChange={event => updateField('password', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <AccordionCard
+            icon={<KeyRound size={17} />}
+            title="Account"
+            description="Sign-in username and password."
+            isOpen={openSection === 'account'}
+            isDone={Boolean(form.username && form.password)}
+            onToggle={() => toggleSection('account')}
+          >
+            <FormGrid>
+              <Field label="Username" required error={errors.username} name="username">
+                <input autoFocus className="control" value={form.username} onChange={event => updateField('username', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Password" required error={errors.password} name="password">
+                <input className="control" type="password" value={form.password} onChange={event => updateField('password', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+            </FormGrid>
+          </AccordionCard>
+
+          <AccordionCard
+            icon={<IdCard size={17} />}
+            title="Personal Information"
+            description="Name and contact details."
+            isOpen={openSection === 'personal'}
+            isDone={Boolean(form.first_name || form.last_name || form.email || form.phone)}
+            onToggle={() => toggleSection('personal')}
+          >
+            <FormGrid>
+              <Field label="First name" name="first_name">
+                <input className="control" value={form.first_name} onChange={event => updateField('first_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Last name" name="last_name">
+                <input className="control" value={form.last_name} onChange={event => updateField('last_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+            </FormGrid>
+            <FormGrid>
+              <Field label="Email" error={errors.email} name="email">
+                <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Phone" name="phone">
+                <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+            </FormGrid>
+          </AccordionCard>
+
+          <AccordionCard
+            icon={<ShieldCheck size={17} />}
+            title="Permissions"
+            description="What this account is allowed to do."
+            isOpen={openSection === 'permissions'}
+            isDone
+            onToggle={() => toggleSection('permissions')}
+          >
+            <Field label="Role" name="role">
+              <SegmentedControl
+                value={form.role}
+                options={ROLES.map(role => ({ value: role, label: ROLE_LABELS[role] }))}
+                onChange={value => updateField('role', value as Role)}
+              />
+            </Field>
+          </AccordionCard>
         </div>
-        <div className="modal-grid-2" style={{ gap: 14 }}>
-          <Field label="First name" name="first_name">
-            <input className="control" value={form.first_name} onChange={event => updateField('first_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Last name" name="last_name">
-            <input className="control" value={form.last_name} onChange={event => updateField('last_name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-        </div>
-        <div className="modal-grid-2" style={{ gap: 14 }}>
-          <Field label="Email" error={errors.email} name="email">
-            <input className="control" value={form.email} onChange={event => updateField('email', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Phone" name="phone">
-            <input className="control" value={form.phone} onChange={event => updateField('phone', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-        </div>
-        <Field label="Role" name="role">
-          <select className="control" value={form.role} onChange={event => updateField('role', event.target.value as Role)} style={{ width: '100%', padding: '0 12px' }}>
-            {ROLES.map(role => (
-              <option key={role} value={role}>{ROLE_LABELS[role]}</option>
-            ))}
-          </select>
-        </Field>
 
         {create.isError && <div className="error-banner">{formErrorMessage(create.error, 'User could not be created.')}</div>}
       </Modal>

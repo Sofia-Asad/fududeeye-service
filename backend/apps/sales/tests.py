@@ -22,17 +22,17 @@ def client():
 
 @pytest.fixture
 def admin_user(db):
-    return User.objects.create_user(username='admin_sales', password='pass', role='ADMIN')
+    return User.objects.create_user(username='admin_sales', password='pass', role='ADMIN', email='admin_sales@fududeeye.local')
 
 
 @pytest.fixture
 def manager_user(db):
-    return User.objects.create_user(username='mgr_sales', password='pass', role='MANAGER')
+    return User.objects.create_user(username='mgr_sales', password='pass', role='MANAGER', email='mgr_sales@fududeeye.local')
 
 
 @pytest.fixture
 def sales_user(db):
-    return User.objects.create_user(username='staff_sales', password='pass', role='SALES')
+    return User.objects.create_user(username='staff_sales', password='pass', role='SALES', email='staff_sales@fududeeye.local')
 
 
 @pytest.fixture

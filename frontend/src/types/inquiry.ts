@@ -13,6 +13,10 @@ export interface Inquiry {
   item_needed: string
   category: number | null
   category_name: string | null
+  item_category_name: string | null
+  item_listed_price: string | null
+  item_owner_type: string | null
+  item_owner_name: string | null
   status: InquiryStatus
   handled_by: number | null
   handled_by_name: string | null

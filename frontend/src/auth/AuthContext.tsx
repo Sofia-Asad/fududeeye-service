@@ -7,7 +7,7 @@ import type { User } from '@/types/auth'
 interface AuthContextValue {
   user: User | null
   isLoading: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser().finally(() => setIsLoading(false))
   }, [])
 
-  const login = async (username: string, password: string) => {
-    const response = await api.post<User>('/auth/login/', { username, password })
+  const login = async (email: string, password: string) => {
+    const response = await api.post<User>('/auth/login/', { email, password })
     setUser(response.data)
     await refreshUser()
   }

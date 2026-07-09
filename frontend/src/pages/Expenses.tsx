@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { CreditCard, Filter, FolderPlus, Plus, ReceiptText, RotateCcw, Tags } from 'lucide-react'
+import { CreditCard, FileText, Filter, FolderPlus, Plus, ReceiptText, RotateCcw, Tags } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
@@ -10,7 +10,7 @@ import { useAuth } from '@/auth/AuthContext'
 import DataTable, { type Column } from '@/components/DataTable'
 import DirectoryCard, { DirectorySelect, DirectorySkeleton, DirectoryToolbar, SearchBox } from '@/components/DirectoryCard'
 import EmptyState from '@/components/EmptyState'
-import { Field } from '@/components/FormSection'
+import { CompactTextarea, Field, FormGrid } from '@/components/FormSection'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
@@ -18,6 +18,7 @@ import PageHeader from '@/components/PageHeader'
 import PaginationFooter from '@/components/PaginationFooter'
 import PermissionGate from '@/components/PermissionGate'
 import SummaryCard from '@/components/SummaryCard'
+import AccordionCard from '@/components/wizard/AccordionCard'
 import { errorMessage } from '@/lib/errors'
 import { formatDate, PAYMENT_METHOD_LABELS, PAYMENT_METHODS, todayISO } from '@/lib/sales'
 import { notifyError, notifySuccess } from '@/lib/toast'
@@ -27,6 +28,7 @@ import type { Expense } from '@/types/finance'
 import type { PaymentMethod } from '@/types/sales'
 
 type PaymentFilter = 'all' | PaymentMethod
+type ExpenseSectionKey = 'info' | 'payment' | 'notes'
 
 const moneyPattern = /^\d+(\.\d{1,2})?$/
 const expenseSchema = z.object({
@@ -86,6 +88,11 @@ export default function Expenses() {
   const [categoryForm, setCategoryForm] = useState<CategoryForm>(emptyCategoryForm)
   const [expenseErrors, setExpenseErrors] = useState<Record<string, string>>({})
   const [categoryErrors, setCategoryErrors] = useState<Record<string, string>>({})
+  const [openSection, setOpenSection] = useState<ExpenseSectionKey | null>('info')
+
+  function toggleSection(key: ExpenseSectionKey) {
+    setOpenSection(current => (current === key ? null : key))
+  }
 
   useEffect(() => {
     setCurrentPage(1)
@@ -134,6 +141,7 @@ export default function Expenses() {
       setExpenseModalOpen(false)
       setExpenseForm({ ...emptyExpenseForm, expense_date: todayISO() })
       setExpenseErrors({})
+      setOpenSection('info')
       void queryClient.invalidateQueries({ queryKey: ['expenses'] })
       void queryClient.invalidateQueries({ queryKey: ['reports'] })
       notifySuccess('Expense saved')
@@ -261,7 +269,7 @@ export default function Expenses() {
                   <FolderPlus size={16} />
                   Category
                 </button>
-                <button type="button" onClick={() => setExpenseModalOpen(true)} className="primary-button">
+                <button type="button" onClick={() => { setOpenSection('info'); setExpenseModalOpen(true) }} className="primary-button">
                   <Plus size={16} />
                   New expense
                 </button>
@@ -329,7 +337,7 @@ export default function Expenses() {
                     icon={<ReceiptText size={18} />}
                     title="No expenses found."
                     subtitle="Record your first operating cost to start tracking spend."
-                    action={<button type="button" onClick={() => setExpenseModalOpen(true)} className="primary-button"><Plus size={16} />New expense</button>}
+                    action={<button type="button" onClick={() => { setOpenSection('info'); setExpenseModalOpen(true) }} className="primary-button"><Plus size={16} />New expense</button>}
                   />
                 )}
               />
@@ -343,6 +351,7 @@ export default function Expenses() {
         onClose={() => setExpenseModalOpen(false)}
         title="New expense"
         description="Record an operating cost."
+        width={640}
         formRef={expenseFormRef}
         onSubmit={submitExpense}
         footer={(
@@ -354,35 +363,66 @@ export default function Expenses() {
           </>
         )}
       >
-        <Field label="Category" required error={expenseErrors.category} name="category">
-          <select autoFocus className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-            <option value="">Choose category</option>
-            {(categories.data?.results ?? []).map(row => (
-              <option key={row.id} value={row.id}>{row.name}</option>
-            ))}
-          </select>
-        </Field>
-        <div className="modal-grid-3" style={{ gap: 14 }}>
-          <Field label="Amount" required error={expenseErrors.amount} name="amount">
-            <input className="control" value={expenseForm.amount} onChange={event => updateExpenseField('amount', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Date" required error={expenseErrors.expense_date} name="expense_date">
-            <input className="control" type="date" value={expenseForm.expense_date} onChange={event => updateExpenseField('expense_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
-          </Field>
-          <Field label="Payment" name="payment_method">
-            <select className="control" value={expenseForm.payment_method} onChange={event => updateExpenseField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
-              {PAYMENT_METHODS.map(method => (
-                <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
-              ))}
-            </select>
-          </Field>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <AccordionCard
+            icon={<ReceiptText size={17} />}
+            title="Expense Information"
+            description="What was this cost for?"
+            isOpen={openSection === 'info'}
+            isDone={Boolean(expenseForm.category && expenseForm.description)}
+            onToggle={() => toggleSection('info')}
+          >
+            <Field label="Category" required error={expenseErrors.category} name="category">
+              <select className="control" value={expenseForm.category} onChange={event => updateExpenseField('category', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
+                <option value="">Choose category</option>
+                {(categories.data?.results ?? []).map(row => (
+                  <option key={row.id} value={row.id}>{row.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Description" required error={expenseErrors.description} name="description">
+              <input className="control" value={expenseForm.description} onChange={event => updateExpenseField('description', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+            </Field>
+          </AccordionCard>
+
+          <AccordionCard
+            icon={<CreditCard size={17} />}
+            title="Payment"
+            description="Amount, date, and payment method."
+            isOpen={openSection === 'payment'}
+            isDone={Boolean(expenseForm.amount && expenseForm.expense_date)}
+            onToggle={() => toggleSection('payment')}
+          >
+            <FormGrid>
+              <Field label="Amount" required error={expenseErrors.amount} name="amount">
+                <input className="control" value={expenseForm.amount} onChange={event => updateExpenseField('amount', event.target.value)} inputMode="decimal" style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+              <Field label="Date" required error={expenseErrors.expense_date} name="expense_date">
+                <input className="control" type="date" value={expenseForm.expense_date} onChange={event => updateExpenseField('expense_date', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
+              </Field>
+            </FormGrid>
+            <Field label="Payment method" name="payment_method">
+              <select className="control" value={expenseForm.payment_method} onChange={event => updateExpenseField('payment_method', event.target.value as PaymentMethod)} style={{ width: '100%', padding: '0 12px' }}>
+                {PAYMENT_METHODS.map(method => (
+                  <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>
+                ))}
+              </select>
+            </Field>
+          </AccordionCard>
+
+          <AccordionCard
+            icon={<FileText size={17} />}
+            title="Notes"
+            description="Optional internal notes."
+            isOpen={openSection === 'notes'}
+            isDone={Boolean(expenseForm.notes)}
+            onToggle={() => toggleSection('notes')}
+          >
+            <Field label="Notes" name="notes">
+              <CompactTextarea value={expenseForm.notes} onChange={event => updateExpenseField('notes', event.target.value)} />
+            </Field>
+          </AccordionCard>
         </div>
-        <Field label="Description" required error={expenseErrors.description} name="description">
-          <textarea className="control" value={expenseForm.description} onChange={event => updateExpenseField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-        </Field>
-        <Field label="Notes" name="notes">
-          <textarea className="control" value={expenseForm.notes} onChange={event => updateExpenseField('notes', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
-        </Field>
         {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
       </Modal>
 
@@ -407,7 +447,7 @@ export default function Expenses() {
           <input autoFocus className="control" value={categoryForm.name} onChange={event => updateCategoryField('name', event.target.value)} style={{ width: '100%', padding: '0 12px' }} />
         </Field>
         <Field label="Description" name="description">
-          <textarea className="control" value={categoryForm.description} onChange={event => updateCategoryField('description', event.target.value)} rows={3} style={{ width: '100%', height: 'auto', padding: 12, resize: 'vertical' }} />
+          <CompactTextarea value={categoryForm.description} onChange={event => updateCategoryField('description', event.target.value)} />
         </Field>
         {createCategory.isError && <div className="error-banner">{errorMessage(createCategory.error)}</div>}
       </Modal>
