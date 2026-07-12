@@ -1,4 +1,4 @@
-import { User } from 'lucide-react'
+import { Plus, User } from 'lucide-react'
 
 import CustomerPreviewCard from '@/components/wizard/CustomerPreviewCard'
 import SearchableSelect from '@/components/wizard/SearchableSelect'
@@ -9,12 +9,20 @@ export default function CustomerSelector({
   customers,
   value,
   onSelect,
+  onSearch,
+  allowQuickAdd,
+  onQuickAdd,
   error,
   placeholder = 'Search by name or phone...',
 }: {
   customers: Customer[]
   value: string
   onSelect: (customer: Customer) => void
+  /** Fires on every keystroke so the parent can drive a server-side search. */
+  onSearch?: (query: string) => void
+  /** Shows a "+ Quick Add Customer" action when no results match — Items and Demands only, never Complaints. */
+  allowQuickAdd?: boolean
+  onQuickAdd?: (query: string) => void
   error?: boolean
   placeholder?: string
 }) {
@@ -39,9 +47,25 @@ export default function CustomerSelector({
           </span>
         )}
         onSelect={onSelect}
+        onQueryChange={onSearch}
         placeholder={placeholder}
         emptyLabel="No customers found."
         error={error}
+        renderEmpty={allowQuickAdd ? query => (
+          <div style={{ padding: '10px 12px', textAlign: 'center' }}>
+            <div style={{ color: 'var(--muted)', fontSize: 12.5, marginBottom: 8 }}>No customers found.</div>
+            <button
+              type="button"
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => onQuickAdd?.(query)}
+              className="secondary-button"
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              <Plus size={14} />
+              Quick Add Customer
+            </button>
+          </div>
+        ) : undefined}
       />
       {selected && <CustomerPreviewCard customer={selected} />}
     </div>

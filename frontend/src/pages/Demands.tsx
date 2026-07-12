@@ -20,6 +20,8 @@ import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
 import AccordionCard from '@/components/wizard/AccordionCard'
 import CustomerSelector from '@/components/wizard/CustomerSelector'
+import QuickAddCustomerModal from '@/components/wizard/QuickAddCustomerModal'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { errorMessage } from '@/lib/errors'
 import { DEMAND_STATUS_LABELS, DEMAND_STATUSES, formatDate } from '@/lib/service'
 import { notifyError, notifySuccess } from '@/lib/toast'
@@ -85,6 +87,10 @@ export default function Demands() {
   const [form, setForm] = useState<DemandForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [openSection, setOpenSection] = useState<DemandSectionKey | null>('customer')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const debouncedCustomerSearch = useDebouncedValue(customerSearch)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddQuery, setQuickAddQuery] = useState('')
 
   useFocusFirstError(errors, formRef)
   useEscapeToClose(modalOpen, () => setModalOpen(false))
@@ -114,8 +120,8 @@ export default function Demands() {
   })
 
   const customers = useQuery({
-    queryKey: ['customers', 'demand-picker'],
-    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    queryKey: ['customers', 'demand-picker', debouncedCustomerSearch],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name', search: debouncedCustomerSearch || undefined }),
     enabled: modalOpen,
   })
 
@@ -301,6 +307,9 @@ export default function Demands() {
                 customers={customers.data?.results ?? []}
                 value={form.customer}
                 onSelect={customer => updateField('customer', String(customer.id))}
+                onSearch={setCustomerSearch}
+                allowQuickAdd
+                onQuickAdd={query => { setQuickAddQuery(query); setQuickAddOpen(true) }}
                 error={!!errors.customer}
               />
             </Field>
@@ -364,6 +373,13 @@ export default function Demands() {
 
         {create.isError && <div className="error-banner">{errorMessage(create.error)}</div>}
       </Modal>
+
+      <QuickAddCustomerModal
+        open={quickAddOpen}
+        initialQuery={quickAddQuery}
+        onClose={() => setQuickAddOpen(false)}
+        onCreated={customer => updateField('customer', String(customer.id))}
+      />
     </Layout>
   )
 }

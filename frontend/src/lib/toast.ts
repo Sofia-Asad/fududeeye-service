@@ -7,3 +7,7 @@ export function notifySuccess(message: string) {
 export function notifyError(message: string) {
   toast.error(message)
 }
+
+export function notifyInfo(message: string) {
+  toast(message)
+}

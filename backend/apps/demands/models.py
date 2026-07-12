@@ -66,7 +66,10 @@ class Demand(AuditedModel):
     def suggest_matches(self):
         from apps.inventory.models import Item
 
-        matches = Item.objects.filter(status=Item.Status.ACTIVE)
+        # Draft items still count — they're unpublished but staff can match
+        # a demand to them before publishing. Reserved/sold/withdrawn items
+        # are no longer available, so those stay excluded.
+        matches = Item.objects.filter(status__in=[Item.Status.DRAFT, Item.Status.ACTIVE])
         if self.category_id:
             matches = matches.filter(category_id=self.category_id)
         if self.target_price_min is not None:

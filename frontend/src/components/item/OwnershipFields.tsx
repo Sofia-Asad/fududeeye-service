@@ -1,4 +1,5 @@
 import { FieldLabel, FormGrid, MoneyInput, SegmentedControl } from '@/components/FormSection'
+import CustomerSelector from '@/components/wizard/CustomerSelector'
 import type { Customer } from '@/types/customer'
 import type { OwnerType } from '@/types/inventory'
 
@@ -16,11 +17,15 @@ export default function OwnershipFields({
   errors,
   customers,
   onChange,
+  onSearchCustomers,
+  onQuickAddCustomer,
 }: {
   values: OwnershipValues
   errors: FieldErrors
   customers: Customer[]
   onChange: (field: keyof OwnershipValues, value: string) => void
+  onSearchCustomers?: (query: string) => void
+  onQuickAddCustomer?: (query: string) => void
 }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -40,12 +45,15 @@ export default function OwnershipFields({
           {values.owner_type === 'CONSIGNMENT' ? (
             <>
               <FieldLabel label="Owner" required error={errors.owner} name="owner">
-                <select className="control" value={values.owner} onChange={event => onChange('owner', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-                  <option value="">Choose customer</option>
-                  {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
-                  ))}
-                </select>
+                <CustomerSelector
+                  customers={customers}
+                  value={values.owner}
+                  onSelect={customer => onChange('owner', String(customer.id))}
+                  onSearch={onSearchCustomers}
+                  allowQuickAdd
+                  onQuickAdd={onQuickAddCustomer}
+                  error={!!errors.owner}
+                />
               </FieldLabel>
               <FieldLabel label="Owner asking price" required error={errors.owner_asking_price} name="owner_asking_price">
                 <MoneyInput value={values.owner_asking_price} onChange={event => onChange('owner_asking_price', event.target.value)} />

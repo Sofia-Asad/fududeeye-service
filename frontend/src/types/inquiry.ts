@@ -17,6 +17,8 @@ export interface Inquiry {
   item_listed_price: string | null
   item_owner_type: string | null
   item_owner_name: string | null
+  item_status: string | null
+  item_image: string | null
   status: InquiryStatus
   handled_by: number | null
   handled_by_name: string | null

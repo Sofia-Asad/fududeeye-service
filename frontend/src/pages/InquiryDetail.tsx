@@ -171,8 +171,15 @@ export default function InquiryDetail() {
                     : current.kind === 'ITEM_REQUEST' ? (current.item_needed || '-') : INQUIRY_KIND_LABELS[current.kind],
                 },
                 ...(current.item ? [
+                  {
+                    label: 'Photo',
+                    value: current.item_image
+                      ? <img src={current.item_image} alt={current.item_title ?? 'Item'} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
+                      : '-',
+                  },
                   { label: 'Category', value: current.item_category_name || '-' },
                   { label: 'Price', value: current.item_listed_price ? <MoneyDisplay value={current.item_listed_price} /> : '-' },
+                  { label: 'Item status', value: current.item_status ? <StatusBadge status={current.item_status} /> : '-' },
                 ] : []),
                 { label: 'Message', value: current.message || '-' },
                 {
@@ -228,6 +235,17 @@ export default function InquiryDetail() {
                     Close Inquiry
                   </button>
                 </div>
+
+                {current.item && (
+                  <Link
+                    to={`/items/${current.item}`}
+                    className="secondary-button"
+                    style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}
+                  >
+                    <Tag size={15} />
+                    View Item
+                  </Link>
+                )}
 
                 {followUpOpen ? (
                   <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>

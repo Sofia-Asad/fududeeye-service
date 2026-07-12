@@ -7,6 +7,8 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import { useCreateInquiry } from '@/features/inquiries/useCreateInquiry'
+import { getErrorMessage } from '@/lib/errors'
+import { notifyError } from '@/lib/toast'
 
 const contactSellerSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name.'),
@@ -29,13 +31,17 @@ export default function ContactSellerForm({ itemId }: { itemId: string }) {
   })
 
   async function onSubmit(values: ContactSellerForm) {
-    await mutateAsync({
-      kind: 'ITEM_INTEREST',
-      itemId,
-      fullName: values.fullName,
-      phone: values.phone,
-      message: values.message,
-    })
+    try {
+      await mutateAsync({
+        kind: 'ITEM_INTEREST',
+        itemId,
+        fullName: values.fullName,
+        phone: values.phone,
+        message: values.message,
+      })
+    } catch (error) {
+      notifyError(getErrorMessage(error, 'Something went wrong sending your message. Please try again in a moment.'))
+    }
   }
 
   if (isSuccess) {

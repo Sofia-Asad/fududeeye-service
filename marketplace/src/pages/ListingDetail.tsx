@@ -14,7 +14,7 @@ import ListingCard from '@/features/listings/ListingCard'
 import { useDisclosure } from '@/hooks/useDisclosure'
 import Container from '@/layout/Container'
 import { cn } from '@/lib/utils'
-import { buildWhatsAppUrl } from '@/lib/whatsapp'
+import { buildListingWhatsAppMessage, buildWhatsAppUrl } from '@/lib/whatsapp'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { useListingQuery, useListingsQuery } from '@/features/listings/queries'
 
@@ -59,7 +59,14 @@ export default function ListingDetail() {
   const current = listing.data
   const images = current.images
   const activeImage = images[activeImageIndex] ?? images[0]
-  const whatsAppMessage = `Hi Fududeeye, I'm interested in "${current.title}" (Listing #${current.id}). Is it still available?`
+  const whatsAppMessage = buildListingWhatsAppMessage({
+    id: current.id,
+    title: current.title,
+    categoryName: current.categoryName,
+    condition: CONDITION_LABEL[current.condition],
+    location: current.location,
+    priceLabel: formatCurrency(current.price),
+  })
   const relatedListings = (related.data?.results ?? []).filter(item => item.id !== current.id).slice(0, 4)
 
   return (

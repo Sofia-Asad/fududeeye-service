@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CircleDollarSign, Globe, Lock, Package, Pencil, Save, Tags, Trash2, X } from 'lucide-react'
+import { ArrowLeft, CircleDollarSign, Globe, Lock, Package, Pencil, Plus, Save, Tags, Trash2, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { listCustomers } from '@/api/customers'
+import { getCustomer, listCustomers } from '@/api/customers'
 import { deleteItem, getItem, listCategories, updateItem } from '@/api/inventory'
 import { useAuth } from '@/auth/AuthContext'
 import ActionFooter from '@/components/ActionFooter'
@@ -17,6 +17,9 @@ import PermissionGate from '@/components/PermissionGate'
 import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
+import CustomerSelector from '@/components/wizard/CustomerSelector'
+import QuickAddCustomerModal from '@/components/wizard/QuickAddCustomerModal'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { errorMessage, formErrorMessage } from '@/lib/errors'
 import {
   ATTRIBUTE_FIELDS,
@@ -32,6 +35,10 @@ import {
 } from '@/lib/inventory'
 import { notifyError, notifySuccess } from '@/lib/toast'
 import type { Item, ItemCondition, ItemStatus, OwnerType } from '@/types/inventory'
+
+// Sold/Completed/Refunded are system-controlled (via the Sales workflow) and never
+// manually selectable here — only these four remain under staff control.
+const MANUAL_STATUSES = ['ACTIVE', 'RESERVED', 'DRAFT', 'WITHDRAWN'] as const
 
 interface DetailForm {
   title: string
@@ -75,6 +82,10 @@ export default function ItemDetail() {
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [form, setForm] = useState<DetailForm | null>(null)
   const [attributeValues, setAttributeValues] = useState<Record<string, string>>({})
+  const [customerSearch, setCustomerSearch] = useState('')
+  const debouncedCustomerSearch = useDebouncedValue(customerSearch)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddQuery, setQuickAddQuery] = useState('')
 
   const item = useQuery({
     queryKey: ['item', itemId],
@@ -88,10 +99,27 @@ export default function ItemDetail() {
   })
 
   const customers = useQuery({
-    queryKey: ['customers', 'item-owner-picker'],
-    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    queryKey: ['customers', 'item-owner-picker', debouncedCustomerSearch],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name', search: debouncedCustomerSearch || undefined }),
     enabled: mode === 'edit' && form?.owner_type === 'CONSIGNMENT',
   })
+
+  // The item's current owner may not be on the first page of results (or may
+  // not match an in-progress search) — fetch it directly so the picker can
+  // always render the existing selection and its preview card.
+  const currentOwner = useQuery({
+    queryKey: ['customer', item.data?.owner],
+    queryFn: () => getCustomer(item.data!.owner!),
+    enabled: mode === 'edit' && item.data?.owner_type === 'CONSIGNMENT' && !!item.data?.owner,
+  })
+
+  const ownerOptions = useMemo(() => {
+    const results = customers.data?.results ?? []
+    if (currentOwner.data && !results.some(customer => customer.id === currentOwner.data!.id)) {
+      return [currentOwner.data, ...results]
+    }
+    return results
+  }, [customers.data?.results, currentOwner.data])
 
   const currentItem = item.data
   const canManageInventory = user?.role === 'ADMIN' || user?.role === 'MANAGER'
@@ -136,8 +164,8 @@ export default function ItemDetail() {
     onError: error => notifyError(formErrorMessage(error, 'Item could not be updated.')),
   })
 
-  const withdraw = useMutation({
-    mutationFn: () => updateItem(itemId, { status: 'WITHDRAWN' }),
+  const changeStatus = useMutation({
+    mutationFn: (status: ItemStatus) => updateItem(itemId, { status }),
     onSuccess: updatedItem => {
       void queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.setQueryData(['item', itemId], updatedItem)
@@ -230,10 +258,26 @@ export default function ItemDetail() {
             actions={(
               <>
                 <StatusBadge status={currentItem.status} />
-                {mode === 'view' && canEdit && currentItem.status !== 'WITHDRAWN' && (
-                  <button type="button" onClick={() => withdraw.mutate()} disabled={withdraw.isPending} className="secondary-button" style={{ opacity: withdraw.isPending ? .7 : 1 }}>
-                    {withdraw.isPending ? 'Withdrawing...' : 'Withdraw'}
-                  </button>
+                {mode === 'view' && canEdit && MANUAL_STATUSES.includes(currentItem.status as typeof MANUAL_STATUSES[number]) && (
+                  <select
+                    className="control"
+                    value={currentItem.status}
+                    onChange={event => changeStatus.mutate(event.target.value as ItemStatus)}
+                    disabled={changeStatus.isPending}
+                    style={{ width: 'auto', padding: '0 30px 0 12px' }}
+                    aria-label="Change item status"
+                  >
+                    <option value="ACTIVE" disabled={!canManageInventory}>Active</option>
+                    <option value="RESERVED" disabled={!canManageInventory}>Reserved</option>
+                    <option value="DRAFT">Inactive</option>
+                    <option value="WITHDRAWN">Withdrawn</option>
+                  </select>
+                )}
+                {mode === 'view' && (
+                  <Link to="/items/new" className="secondary-button">
+                    <Plus size={16} />
+                    New Item
+                  </Link>
                 )}
                 {mode === 'view' && canEdit && (
                   <button type="button" onClick={() => setMode('edit')} className="secondary-button">
@@ -349,15 +393,14 @@ export default function ItemDetail() {
                     {form.owner_type === 'CONSIGNMENT' ? (
                       <>
                         <FieldLabel label="Owner">
-                          <select className="control" value={form.owner} onChange={event => updateField('owner', event.target.value)} style={{ width: '100%', padding: '0 12px' }}>
-                            <option value="">Choose customer</option>
-                            {(customers.data?.results ?? []).map(customer => (
-                              <option key={customer.id} value={customer.id}>{customer.full_name} - {customer.phone}</option>
-                            ))}
-                            {currentItem.owner_type === 'CONSIGNMENT' && currentItem.owner && !(customers.data?.results ?? []).some(customer => customer.id === currentItem.owner) && (
-                              <option value={currentItem.owner}>{currentItem.owner_name}</option>
-                            )}
-                          </select>
+                          <CustomerSelector
+                            customers={ownerOptions}
+                            value={form.owner}
+                            onSelect={customer => updateField('owner', String(customer.id))}
+                            onSearch={setCustomerSearch}
+                            allowQuickAdd
+                            onQuickAdd={query => { setQuickAddQuery(query); setQuickAddOpen(true) }}
+                          />
                         </FieldLabel>
                         <FieldLabel label="Owner asking price">
                           <MoneyInput value={form.owner_asking_price} onChange={event => updateField('owner_asking_price', event.target.value)} />
@@ -400,8 +443,8 @@ export default function ItemDetail() {
                 </FormSection>
               </PermissionGate>
 
-              {(save.isError || withdraw.isError || remove.isError) && (
-                <div className="error-banner">{formErrorMessage(save.error ?? withdraw.error ?? remove.error, 'Item could not be updated.')}</div>
+              {(save.isError || changeStatus.isError || remove.isError) && (
+                <div className="error-banner">{formErrorMessage(save.error ?? changeStatus.error ?? remove.error, 'Item could not be updated.')}</div>
               )}
 
               <ActionFooter>
@@ -452,6 +495,13 @@ export default function ItemDetail() {
           </div>
         </div>
       </div>
+
+      <QuickAddCustomerModal
+        open={quickAddOpen}
+        initialQuery={quickAddQuery}
+        onClose={() => setQuickAddOpen(false)}
+        onCreated={customer => updateField('owner', String(customer.id))}
+      />
     </Layout>
   )
 }

@@ -804,6 +804,10 @@ textarea.control {
 .accordion-section[data-state="active"] {
   border-color: rgba(242, 183, 5, .45);
   box-shadow: 0 1px 2px rgba(20, 29, 68, .04), 0 6px 20px -6px rgba(242, 183, 5, .28);
+  /* The card itself clips just like accordion-body-inner below — an open
+     dropdown (e.g. the customer search results) doesn't add to this box's
+     flow height, so without this it gets cut off at the card's own edge. */
+  overflow: visible;
 }
 
 .accordion-section[data-state="upcoming"] {
@@ -907,6 +911,13 @@ textarea.control {
 
 .accordion-body-inner {
   overflow: hidden;
+}
+
+/* Once a section is fully open, stop clipping — otherwise any popup rendered inside
+   (e.g. the customer search dropdown) gets invisibly cut off by this collapse-animation
+   container even though its data loaded correctly. */
+.accordion-section[data-state="active"] .accordion-body-inner {
+  overflow: visible;
 }
 
 .accordion-body {
@@ -1080,6 +1091,12 @@ textarea.control {
   height: 100vh;
   flex: 1;
   overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.app-main::-webkit-scrollbar {
+  display: none;
 }
 
 .desktop-topnav {

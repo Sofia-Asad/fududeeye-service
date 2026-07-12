@@ -134,17 +134,21 @@ def test_rejects_invalid_price_range(client, admin_user, customer, category):
 
 
 @pytest.mark.django_db
-def test_suggest_matches_filters_active_same_category_inside_price_range(
+def test_suggest_matches_filters_same_category_inside_price_range(
     client,
     admin_user,
     customer,
     category,
     furniture_category,
 ):
-    inside = make_company_item(category, 'Dell Latitude', '300.00')
+    active = make_company_item(category, 'Dell Latitude', '300.00')
+    # Draft still counts — staff can match a demand to inventory that isn't
+    # published to the marketplace yet.
+    draft = make_company_item(category, 'Draft Laptop', '300.00', status=Item.Status.DRAFT)
     make_company_item(category, 'Too Cheap Phone', '150.00')
     make_company_item(category, 'Too Expensive Laptop', '450.00')
-    make_company_item(category, 'Draft Laptop', '300.00', status=Item.Status.DRAFT)
+    # Reserved/sold stock is no longer available, so it stays excluded.
+    make_company_item(category, 'Reserved Laptop', '300.00', status=Item.Status.RESERVED)
     make_company_item(furniture_category, 'Office Chair', '300.00')
     demand = Demand.objects.create(
         customer=customer,
@@ -155,12 +159,12 @@ def test_suggest_matches_filters_active_same_category_inside_price_range(
     )
 
     matches = list(demand.suggest_matches())
-    assert matches == [inside]
+    assert set(matches) == {active, draft}
 
     client.force_authenticate(user=admin_user)
     resp = client.get(f'/api/v1/demands/{demand.pk}/suggested-matches/')
     assert resp.status_code == 200
-    assert [item['id'] for item in resp.data] == [inside.pk]
+    assert {item['id'] for item in resp.data} == {active.pk, draft.pk}
 
 
 @pytest.mark.django_db
