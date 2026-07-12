@@ -30,6 +30,11 @@ def sales_user(db):
 
 
 @pytest.fixture
+def manager_user(db):
+    return User.objects.create_user(username='manager_demands', password='pass', role='MANAGER', email='manager_demands@fududeeye.local')
+
+
+@pytest.fixture
 def customer(db):
     return Customer.objects.create(full_name='Faadumo Aweys', phone='+252 61 700 0001')
 
@@ -189,3 +194,139 @@ def test_sales_user_cannot_delete_demand(client, sales_user, customer, category)
     resp = client.delete(f'/api/v1/demands/{demand.pk}/')
     assert resp.status_code == 403
     assert Demand.objects.filter(pk=demand.pk).exists()
+
+
+# --- business rule: delete demand (Admin-only, status-gated) ─────────────────
+
+@pytest.mark.django_db
+def test_admin_can_delete_open_demand(client, admin_user, customer, category):
+    demand = Demand.objects.create(customer=customer, title='Open one', category=category, status=Demand.Status.OPEN)
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert resp.status_code == 204
+    assert not Demand.objects.filter(pk=demand.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_can_delete_matched_demand_without_touching_item(client, admin_user, customer, category):
+    item = make_company_item(category, 'Matched Laptop', '300.00')
+    demand = Demand.objects.create(
+        customer=customer, title='Matched one', category=category,
+        status=Demand.Status.MATCHED, matched_item=item,
+    )
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert resp.status_code == 204
+    assert not Demand.objects.filter(pk=demand.pk).exists()
+    # The matched item itself must be completely untouched.
+    item.refresh_from_db()
+    assert Item.objects.filter(pk=item.pk).exists()
+    assert item.status == Item.Status.ACTIVE
+
+
+@pytest.mark.django_db
+def test_admin_can_delete_dropped_demand(client, admin_user, customer, category):
+    demand = Demand.objects.create(customer=customer, title='Dropped one', category=category, status=Demand.Status.DROPPED)
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert resp.status_code == 204
+    assert not Demand.objects.filter(pk=demand.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_cannot_delete_fulfilled_demand(client, admin_user, customer, category):
+    item = make_company_item(category, 'Sold Laptop', '300.00')
+    demand = Demand.objects.create(
+        customer=customer, title='Fulfilled one', category=category,
+        status=Demand.Status.FULFILLED, matched_item=item,
+    )
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert resp.status_code == 400
+    assert 'cannot be deleted' in resp.data['detail']
+    assert Demand.objects.filter(pk=demand.pk).exists()
+
+
+@pytest.mark.django_db
+def test_manager_cannot_delete_demand(client, manager_user, customer, category):
+    demand = Demand.objects.create(customer=customer, title='Laptop wanted', category=category)
+
+    client.force_authenticate(user=manager_user)
+    resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert resp.status_code == 403
+    assert Demand.objects.filter(pk=demand.pk).exists()
+
+
+@pytest.mark.django_db
+def test_anonymous_cannot_delete_demand(client, customer, category):
+    demand = Demand.objects.create(customer=customer, title='Laptop wanted', category=category)
+
+    resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert resp.status_code in (401, 403)
+    assert Demand.objects.filter(pk=demand.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_nonexistent_demand_returns_404(client, admin_user):
+    client.force_authenticate(user=admin_user)
+    resp = client.delete('/api/v1/demands/999999/')
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_delete_demand_only_removes_target_and_preserves_related_records(client, admin_user, customer, category):
+    """Deleting one demand must not touch the customer, an unrelated demand,
+    or a matched item belonging to a different (untouched) demand."""
+    item = make_company_item(category, 'Untouched Item', '300.00')
+    target = Demand.objects.create(customer=customer, title='Delete me', category=category, status=Demand.Status.OPEN)
+    unrelated = Demand.objects.create(
+        customer=customer, title='Keep me', category=category,
+        status=Demand.Status.MATCHED, matched_item=item,
+    )
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/demands/{target.pk}/')
+    assert resp.status_code == 204
+
+    assert not Demand.objects.filter(pk=target.pk).exists()
+    assert Demand.objects.filter(pk=unrelated.pk).exists()
+    assert Customer.objects.filter(pk=customer.pk).exists()
+    assert Item.objects.filter(pk=item.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_open_demand_updates_dashboard_open_count(client, admin_user, customer, category):
+    demand = Demand.objects.create(customer=customer, title='Open one', category=category, status=Demand.Status.OPEN)
+
+    client.force_authenticate(user=admin_user)
+    before = client.get('/api/v1/reports/dashboard/')
+    assert before.status_code == 200
+    assert before.data['counts']['open_demands'] == 1
+
+    del_resp = client.delete(f'/api/v1/demands/{demand.pk}/')
+    assert del_resp.status_code == 204
+
+    after = client.get('/api/v1/reports/dashboard/')
+    assert after.status_code == 200
+    assert after.data['counts']['open_demands'] == 0
+
+
+@pytest.mark.django_db
+def test_deleted_demand_is_audited(client, admin_user, customer, category):
+    """Deletion must be captured by the existing AuditedModel post_delete
+    signal (apps/core/signals.py) — no bespoke audit code should be needed."""
+    demand = Demand.objects.create(customer=customer, title='Audit me', category=category, status=Demand.Status.OPEN)
+    demand_pk = demand.pk
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/demands/{demand_pk}/')
+    assert resp.status_code == 204
+
+    from apps.core.models import AuditLog
+    log = AuditLog.objects.filter(model_name='Demand', object_id=str(demand_pk), action=AuditLog.Action.DELETE).first()
+    assert log is not None
+    assert 'Audit me' in log.object_repr

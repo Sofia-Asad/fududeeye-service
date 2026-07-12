@@ -195,3 +195,99 @@ def test_manager_cannot_delete_expense(client, manager_user, category):
     resp = client.delete(f'/api/v1/expenses/{expense.pk}/')
     assert resp.status_code == 403
     assert Expense.objects.filter(pk=expense.pk).exists()
+
+
+# --- business rule: delete expense ---
+
+@pytest.mark.django_db
+def test_admin_can_delete_expense(client, admin_user, category):
+    expense = Expense.objects.create(
+        category=category,
+        amount=Decimal('450.00'),
+        payment_method=Expense.PaymentMethod.BANK_TRANSFER,
+        description='Shop rent',
+    )
+    other = Expense.objects.create(
+        category=category,
+        amount=Decimal('35.00'),
+        payment_method=Expense.PaymentMethod.CASH,
+        description='Delivery fuel',
+    )
+
+    client.force_authenticate(user=admin_user)
+    resp = client.delete(f'/api/v1/expenses/{expense.pk}/')
+    assert resp.status_code == 204
+    assert not Expense.objects.filter(pk=expense.pk).exists()
+    # Only the targeted record is removed — everything else is untouched.
+    assert Expense.objects.filter(pk=other.pk).exists()
+    assert Expense.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_sales_user_cannot_delete_expense(client, sales_user, category):
+    expense = Expense.objects.create(
+        category=category,
+        amount=Decimal('450.00'),
+        payment_method=Expense.PaymentMethod.BANK_TRANSFER,
+        description='Shop rent',
+    )
+
+    client.force_authenticate(user=sales_user)
+    resp = client.delete(f'/api/v1/expenses/{expense.pk}/')
+    assert resp.status_code == 403
+    assert Expense.objects.filter(pk=expense.pk).exists()
+
+
+@pytest.mark.django_db
+def test_anonymous_cannot_delete_expense(client, category):
+    expense = Expense.objects.create(
+        category=category,
+        amount=Decimal('450.00'),
+        payment_method=Expense.PaymentMethod.BANK_TRANSFER,
+        description='Shop rent',
+    )
+
+    resp = client.delete(f'/api/v1/expenses/{expense.pk}/')
+    assert resp.status_code in (401, 403)
+    assert Expense.objects.filter(pk=expense.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_nonexistent_expense_returns_404(client, admin_user):
+    client.force_authenticate(user=admin_user)
+    resp = client.delete('/api/v1/expenses/999999/')
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_deleted_expense_excluded_from_report_totals(client, admin_user, category):
+    """Covers the "derived financial summaries update correctly" requirement
+    at the API level the frontend reports/dashboard actually read from."""
+    keep = Expense.objects.create(
+        category=category,
+        amount=Decimal('100.00'),
+        expense_date='2026-07-01',
+        payment_method=Expense.PaymentMethod.CASH,
+        description='Keep me',
+    )
+    to_delete = Expense.objects.create(
+        category=category,
+        amount=Decimal('250.00'),
+        expense_date='2026-07-02',
+        payment_method=Expense.PaymentMethod.CASH,
+        description='Delete me',
+    )
+
+    client.force_authenticate(user=admin_user)
+
+    before = client.get('/api/v1/reports/expenses/?start=2026-07-01&end=2026-07-31')
+    assert before.status_code == 200
+    assert Decimal(before.data['total']) == Decimal('350.00')
+
+    del_resp = client.delete(f'/api/v1/expenses/{to_delete.pk}/')
+    assert del_resp.status_code == 204
+
+    after = client.get('/api/v1/reports/expenses/?start=2026-07-01&end=2026-07-31')
+    assert after.status_code == 200
+    assert Decimal(after.data['total']) == Decimal('100.00')
+    assert Expense.objects.filter(pk=keep.pk).exists()

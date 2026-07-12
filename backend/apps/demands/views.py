@@ -1,5 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -21,6 +21,19 @@ class DemandViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'customer__full_name', 'notes']
     ordering_fields = ['created_at', 'target_price_min', 'target_price_max', 'status']
     ordering = ['-created_at']
+
+    def destroy(self, request, *args, **kwargs):
+        # Fulfilled = a matched item was actually sold to this customer —
+        # completed business history, not a record staff should be able to
+        # erase. Open/Matched/Dropped stay deletable for duplicates, mistakes,
+        # and test data.
+        demand = self.get_object()
+        if demand.status == Demand.Status.FULFILLED:
+            return Response(
+                {'detail': 'Fulfilled demands are part of completed business history and cannot be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['get'], url_path='suggested-matches')
     def suggested_matches(self, request, pk=None):

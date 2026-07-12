@@ -57,6 +57,10 @@ export async function updateExpense(id: number, payload: Partial<ExpensePayload>
   return response.data
 }
 
+export async function deleteExpense(id: number) {
+  await api.delete(`/expenses/${id}/`)
+}
+
 export async function getExpenseHistory(id: number) {
   const response = await api.get<{ results: AuditLogRow[] }>(`/expenses/${id}/history/`)
   return response.data.results

@@ -152,3 +152,66 @@ def test_sales_user_cannot_edit_others_customer(client, admin_user, sales_user):
     client.force_authenticate(user=sales_user)
     resp = client.patch(f'/api/v1/customers/{customer_id}/', {'full_name': 'Hijacked'})
     assert resp.status_code == 403
+
+
+# --- business rule: duplicate phone prevention ---
+
+@pytest.mark.django_db
+def test_create_customer_with_unique_phone_succeeds(client, admin_user):
+    Customer.objects.create(full_name='Existing', phone='0611111111')
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/customers/', {'full_name': 'New Customer', 'phone': '0622222222'})
+    assert resp.status_code == 201
+
+
+@pytest.mark.django_db
+def test_create_customer_with_exact_duplicate_phone_rejected(client, admin_user):
+    Customer.objects.create(full_name='Existing', phone='0612345678')
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/customers/', {'full_name': 'Duplicate', 'phone': '0612345678'})
+    assert resp.status_code == 400
+    assert resp.data['phone'] == ['A customer with this phone number already exists.']
+
+
+@pytest.mark.parametrize('variant', ['061 234 5678', '061-234-5678', '0612345678'])
+@pytest.mark.django_db
+def test_create_customer_with_reformatted_duplicate_phone_rejected(client, admin_user, variant):
+    Customer.objects.create(full_name='Existing', phone='0612345678')
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/customers/', {'full_name': 'Duplicate', 'phone': variant})
+    assert resp.status_code == 400
+    assert resp.data['phone'] == ['A customer with this phone number already exists.']
+
+
+@pytest.mark.django_db
+def test_edit_customer_without_changing_phone_succeeds(client, admin_user):
+    c = Customer.objects.create(full_name='Original Name', phone='0613334444')
+    client.force_authenticate(user=admin_user)
+    resp = client.patch(f'/api/v1/customers/{c.pk}/', {'full_name': 'Renamed', 'phone': '0613334444'})
+    assert resp.status_code == 200
+    assert resp.data['full_name'] == 'Renamed'
+
+
+@pytest.mark.django_db
+def test_edit_customer_keeping_own_legacy_duplicate_phone_succeeds(client, admin_user):
+    """Two pre-existing records may already share a phone (data from before this
+    rule existed). Editing one of them without touching phone must still work —
+    it shouldn't get locked out just because another record shares its number."""
+    a = Customer.objects.create(full_name='Legacy A', phone='0619998888')
+    Customer.objects.create(full_name='Legacy B', phone='0619998888')
+    client.force_authenticate(user=admin_user)
+    resp = client.patch(f'/api/v1/customers/{a.pk}/', {'full_name': 'Legacy A Renamed', 'phone': '0619998888'})
+    assert resp.status_code == 200
+    assert resp.data['full_name'] == 'Legacy A Renamed'
+
+
+@pytest.mark.django_db
+def test_edit_customer_phone_to_another_customers_phone_rejected(client, admin_user):
+    Customer.objects.create(full_name='Customer B', phone='0615556666')
+    a = Customer.objects.create(full_name='Customer A', phone='0617778888')
+    client.force_authenticate(user=admin_user)
+    resp = client.patch(f'/api/v1/customers/{a.pk}/', {'phone': '0615556666'})
+    assert resp.status_code == 400
+    assert resp.data['phone'] == ['A customer with this phone number already exists.']
+    a.refresh_from_db()
+    assert a.phone == '0617778888'

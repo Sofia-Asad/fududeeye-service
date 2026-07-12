@@ -106,6 +106,42 @@ class Sale(AuditedModel):
         if item.quantity_sold >= item.quantity:
             Item.objects.filter(pk=item.pk).update(status='SOLD')
 
+        self._fulfill_matched_demand()
+
+    def _fulfill_matched_demand(self):
+        """A Matched demand for this exact buyer + exact matched item is
+        satisfied by this sale — flip it to Fulfilled. Uses .save() (not
+        .update()) so the existing audit-log signal records the transition
+        the same way any other status edit would ('Status changed: Matched
+        -> Fulfilled'); an extra CUSTOM entry notes which sale caused it."""
+        from apps.core.middleware import get_current_ip, get_current_user
+        from apps.core.models import AuditLog
+        from apps.demands.models import Demand
+
+        demands = Demand.objects.filter(
+            customer_id=self.buyer_id,
+            matched_item_id=self.item_id,
+            status=Demand.Status.MATCHED,
+        )
+        if not demands.exists():
+            return
+
+        user = get_current_user()
+        actor = user if user is not None and getattr(user, 'is_authenticated', False) else None
+
+        for demand in demands:
+            demand.status = Demand.Status.FULFILLED
+            demand.save(update_fields=['status'])
+            AuditLog.objects.create(
+                user=actor,
+                action=AuditLog.Action.CUSTOM,
+                model_name='Demand',
+                object_id=str(demand.pk),
+                object_repr=str(demand),
+                changes={'status': f'Auto-fulfilled via Sale #{self.pk}'},
+                ip_address=get_current_ip(),
+            )
+
 
 class Refund(AuditedModel):
     class Reason(models.TextChoices):

@@ -53,6 +53,10 @@ export async function updateDemand(id: number, payload: DemandPayload) {
   return response.data
 }
 
+export async function deleteDemand(id: number) {
+  await api.delete(`/demands/${id}/`)
+}
+
 export async function listSuggestedMatches(id: number) {
   const response = await api.get<SuggestedMatch[]>(`/demands/${id}/suggested-matches/`)
   return response.data

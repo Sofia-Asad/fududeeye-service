@@ -4,7 +4,9 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
+from apps.core.models import AuditLog
 from apps.customers.models import Customer
+from apps.demands.models import Demand
 from apps.inventory.models import Category, Item
 from .models import Sale, Refund
 
@@ -411,3 +413,141 @@ def test_recalculate_sale_profits_command_does_not_mutate_locked_money_fields(
     sale.refresh_from_db()
     assert sale.owner_payout_amount == Decimal('1.00')
     assert sale.company_profit == Decimal('2.00')
+
+
+# ── business rule: automatic demand fulfillment after a matching sale ─────────
+
+def make_demand(customer, category, matched_item=None, status=Demand.Status.OPEN, title='Wants a laptop'):
+    return Demand.objects.create(
+        customer=customer,
+        title=title,
+        category=category,
+        matched_item=matched_item,
+        status=status,
+    )
+
+
+@pytest.mark.django_db
+def test_matched_demand_auto_fulfilled_by_matching_sale(admin_user, category, company_item, buyer):
+    """Same customer + same matched item + Matched status → auto-Fulfilled."""
+    demand = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.MATCHED)
+
+    sale = make_sale(company_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+
+    demand.refresh_from_db()
+    assert demand.status == Demand.Status.FULFILLED
+    assert demand.matched_item_id == company_item.pk   # relationship preserved
+    assert sale.pk is not None
+
+
+@pytest.mark.django_db
+def test_matched_demand_not_fulfilled_for_different_buyer(admin_user, category, company_item, buyer, seller):
+    """A sale of the exact matched item to a DIFFERENT customer must not fulfill it."""
+    demand = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.MATCHED)
+
+    make_sale(company_item, seller, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+
+    demand.refresh_from_db()
+    assert demand.status == Demand.Status.MATCHED
+
+
+@pytest.mark.django_db
+def test_matched_demand_not_fulfilled_for_different_item(admin_user, category, company_item, consignment_item, buyer):
+    """Selling a different item to the same buyer must not fulfill an unrelated demand."""
+    demand = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.MATCHED)
+
+    make_sale(consignment_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('600.00'))
+
+    demand.refresh_from_db()
+    assert demand.status == Demand.Status.MATCHED
+
+
+@pytest.mark.django_db
+def test_open_demand_not_auto_fulfilled(admin_user, category, company_item, buyer):
+    """An Open demand (not yet Matched) must never be auto-fulfilled by a sale."""
+    demand = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.OPEN)
+
+    make_sale(company_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+
+    demand.refresh_from_db()
+    assert demand.status == Demand.Status.OPEN
+
+
+@pytest.mark.django_db
+def test_dropped_demand_not_auto_fulfilled(admin_user, category, company_item, buyer):
+    """A Dropped demand must never be auto-fulfilled by a sale."""
+    demand = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.DROPPED)
+
+    make_sale(company_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+
+    demand.refresh_from_db()
+    assert demand.status == Demand.Status.DROPPED
+
+
+@pytest.mark.django_db
+def test_sale_completes_normally_with_no_related_demand(admin_user, company_item, buyer):
+    """No demand references this buyer/item at all — the sale must still succeed."""
+    sale = make_sale(company_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+    assert sale.pk is not None
+    assert Sale.objects.filter(pk=sale.pk).exists()
+
+
+@pytest.mark.django_db
+def test_auto_fulfillment_writes_demand_activity_log(admin_user, category, company_item, buyer):
+    """The transition must show up in the demand's audit history as an
+    old->new status change, plus a CUSTOM entry naming the sale."""
+    demand = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.MATCHED)
+
+    sale = make_sale(company_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+
+    logs = AuditLog.objects.filter(model_name='Demand', object_id=str(demand.pk)).order_by('id')
+
+    status_update = next(
+        log for log in logs
+        if log.action == AuditLog.Action.UPDATE and 'status' in log.changes
+    )
+    assert status_update.changes['status'] == {'old': 'MATCHED', 'new': 'FULFILLED'}
+
+    sale_reference = next(
+        log for log in logs
+        if log.action == AuditLog.Action.CUSTOM and 'status' in log.changes
+    )
+    assert f'Sale #{sale.pk}' in sale_reference.changes['status']
+
+
+@pytest.mark.django_db
+def test_auto_fulfillment_does_not_affect_unrelated_demand(admin_user, category, company_item, consignment_item, buyer, seller):
+    """Selling one item must not accidentally fulfill an unrelated Matched demand
+    for a different customer/item combination."""
+    unrelated = make_demand(seller, category, matched_item=consignment_item, status=Demand.Status.MATCHED)
+    target = make_demand(buyer, category, matched_item=company_item, status=Demand.Status.MATCHED)
+
+    make_sale(company_item, buyer, admin_user, quantity_sold=1, sale_price=Decimal('450.00'))
+
+    unrelated.refresh_from_db()
+    target.refresh_from_db()
+    assert unrelated.status == Demand.Status.MATCHED
+    assert target.status == Demand.Status.FULFILLED
+
+
+@pytest.mark.django_db
+def test_auto_fulfillment_via_sale_api_preserves_existing_response_shape(client, admin_user, category, company_item, buyer):
+    """The sale creation API response must be unaffected by the new side effect."""
+    make_demand(buyer, category, matched_item=company_item, status=Demand.Status.MATCHED)
+
+    client.force_authenticate(user=admin_user)
+    resp = client.post('/api/v1/sales/', {
+        'item': company_item.pk,
+        'buyer': buyer.pk,
+        'quantity_sold': 1,
+        'sale_price': '450.00',
+        'payment_method': 'CASH',
+        'handled_by': admin_user.pk,
+    })
+    assert resp.status_code == 201
+    assert resp.data['company_profit'] == '150.00'
+
+    resp2 = client.get(f'/api/v1/demands/?customer={buyer.pk}')
+    assert resp2.status_code == 200
+    statuses = [d['status'] for d in resp2.data['results']]
+    assert statuses == ['FULFILLED']

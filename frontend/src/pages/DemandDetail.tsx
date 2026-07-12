@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, ClipboardList, PackageCheck, Save, Target } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, CheckCircle2, ClipboardList, PackageCheck, Save, Target, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getDemand, getDemandHistory, listSuggestedMatches, updateDemand } from '@/api/service'
+import { deleteDemand, getDemand, getDemandHistory, listSuggestedMatches, updateDemand } from '@/api/service'
 import ActivityFeed, { type ActivityFeedItem } from '@/components/ActivityFeed'
 import DataTable, { type Column } from '@/components/DataTable'
 import DetailMeta from '@/components/DetailMeta'
 import DirectoryCard, { DirectorySkeleton } from '@/components/DirectoryCard'
 import EmptyState from '@/components/EmptyState'
 import Layout from '@/components/Layout'
+import Modal from '@/components/Modal'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
+import PermissionGate from '@/components/PermissionGate'
 import { SkeletonLines } from '@/components/Skeleton'
 import StatusBadge from '@/components/StatusBadge'
 import SummaryCard from '@/components/SummaryCard'
@@ -19,6 +21,7 @@ import { changeLabel, formatDateTime } from '@/lib/auditLog'
 import { errorMessage } from '@/lib/errors'
 import { DEMAND_STATUS_LABELS, DEMAND_STATUSES, formatDate } from '@/lib/service'
 import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
 import type { AuditLogRow } from '@/types/reports'
 import type { Item } from '@/types/inventory'
 import type { Demand, DemandStatus } from '@/types/service'
@@ -70,12 +73,16 @@ function buildTimeline(current: Demand, logs: AuditLogRow[]): ActivityFeedItem[]
 
 export default function DemandDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const demandId = Number(id)
   const validDemandId = Number.isFinite(demandId) && demandId > 0
   const queryClient = useQueryClient()
   const formRef = useRef<HTMLFormElement>(null)
   const [status, setStatus] = useState<DemandStatus>('OPEN')
   const [notes, setNotes] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  useEscapeToClose(deleteOpen, () => setDeleteOpen(false))
 
   const demand = useQuery({
     queryKey: ['demand', demandId],
@@ -120,6 +127,23 @@ export default function DemandDetail() {
       void queryClient.invalidateQueries({ queryKey: ['demands'] })
       void queryClient.invalidateQueries({ queryKey: ['demand-history', demandId] })
       notifySuccess('Demand matched')
+    },
+    onError: error => notifyError(errorMessage(error)),
+  })
+
+  const remove = useMutation({
+    mutationFn: () => deleteDemand(demandId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['demands'] })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+      void queryClient.invalidateQueries({ queryKey: ['layout-open-demands-count'] })
+      const customerId = demand.data?.customer
+      if (customerId) {
+        void queryClient.invalidateQueries({ queryKey: ['customer-demands', customerId] })
+      }
+      notifySuccess('Demand deleted')
+      navigate('/demands')
     },
     onError: error => notifyError(errorMessage(error)),
   })
@@ -207,7 +231,23 @@ export default function DemandDetail() {
             eyebrow="Demand detail"
             title={current.title}
             subtitle={`${current.customer_name} - ${current.category_name || 'Any category'} - created ${formatDate(current.created_at)}`}
-            actions={<StatusBadge status={current.status} />}
+            actions={(
+              <>
+                <StatusBadge status={current.status} />
+                <PermissionGate minRole="ADMIN">
+                  {current.status === 'FULFILLED' ? (
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
+                      Fulfilled demands are part of completed business history and cannot be deleted.
+                    </span>
+                  ) : (
+                    <button type="button" onClick={() => setDeleteOpen(true)} className="danger-button">
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  )}
+                </PermissionGate>
+              </>
+            )}
           />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
@@ -274,6 +314,48 @@ export default function DemandDetail() {
           </div>
         </div>
       </div>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete demand?"
+        description="You are about to permanently delete this demand. This action cannot be undone."
+        width={460}
+        footer={(
+          <>
+            <button type="button" onClick={() => setDeleteOpen(false)} className="secondary-button">Cancel</button>
+            <button
+              type="button"
+              onClick={() => remove.mutate()}
+              disabled={remove.isPending}
+              className="danger-button"
+              style={{ opacity: remove.isPending ? .7 : 1 }}
+            >
+              <Trash2 size={16} />
+              {remove.isPending ? 'Deleting...' : 'Delete demand'}
+            </button>
+          </>
+        )}
+      >
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '110px minmax(0, 1fr)', gap: 8, fontSize: 13 }}>
+            <div style={{ color: 'var(--muted)' }}>Customer</div>
+            <div style={{ fontWeight: 700 }}>{current.customer_name}</div>
+            <div style={{ color: 'var(--muted)' }}>Requested item</div>
+            <div style={{ fontWeight: 700 }}>{current.title}</div>
+            <div style={{ color: 'var(--muted)' }}>Category</div>
+            <div style={{ fontWeight: 700 }}>{current.category_name || 'Any'}</div>
+            <div style={{ color: 'var(--muted)' }}>Target price</div>
+            <div style={{ fontWeight: 700 }}>{targetPrice(current.target_price_min, current.target_price_max)}</div>
+            <div style={{ color: 'var(--muted)' }}>Status</div>
+            <div style={{ fontWeight: 700 }}>{DEMAND_STATUS_LABELS[current.status]}</div>
+          </div>
+          <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--warning-bg)', color: 'var(--warning)', fontSize: 12.5, lineHeight: 1.4 }}>
+            Use Dropped instead if this is a real customer request that was cancelled. Permanent deletion is intended for test, duplicate, incorrect, or invalid records.
+          </div>
+        </div>
+        {remove.isError && <div className="error-banner">{errorMessage(remove.error)}</div>}
+      </Modal>
     </Layout>
   )
 }

@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CreditCard, FileText, ReceiptText, Save, Tags } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, CreditCard, FileText, ReceiptText, Save, Tags, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
-import { getExpense, getExpenseHistory, listExpenseCategories, updateExpense } from '@/api/finance'
+import { deleteExpense, getExpense, getExpenseHistory, listExpenseCategories, updateExpense } from '@/api/finance'
 import ActivityFeed, { type ActivityFeedItem } from '@/components/ActivityFeed'
 import DetailMeta from '@/components/DetailMeta'
 import { Field } from '@/components/FormSection'
 import Layout from '@/components/Layout'
+import Modal from '@/components/Modal'
 import { SkeletonLines } from '@/components/Skeleton'
 import MoneyDisplay from '@/components/MoneyDisplay'
 import PageHeader from '@/components/PageHeader'
@@ -17,6 +18,7 @@ import SummaryCard from '@/components/SummaryCard'
 import { changeLabel, formatDateTime } from '@/lib/auditLog'
 import { errorMessage } from '@/lib/errors'
 import { notifyError, notifySuccess } from '@/lib/toast'
+import { useEscapeToClose } from '@/lib/useEscapeToClose'
 import { fieldErrors, useFocusFirstError } from '@/lib/validation'
 import { formatDate, PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from '@/lib/sales'
 import type { AuditLogRow } from '@/types/reports'
@@ -63,14 +65,17 @@ function historyItems(logs: AuditLogRow[]): ActivityFeedItem[] {
 
 export default function ExpenseDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const expenseId = Number(id)
   const validExpenseId = Number.isFinite(expenseId) && expenseId > 0
   const queryClient = useQueryClient()
   const formRef = useRef<HTMLFormElement>(null)
   const [form, setForm] = useState<ExpenseEditForm | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   useFocusFirstError(errors, formRef)
+  useEscapeToClose(deleteOpen, () => setDeleteOpen(false))
 
   const expense = useQuery({
     queryKey: ['expense', expenseId],
@@ -119,6 +124,18 @@ export default function ExpenseDetail() {
     onError: error => notifyError(errorMessage(error)),
   })
 
+  const remove = useMutation({
+    mutationFn: () => deleteExpense(expenseId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      notifySuccess('Expense deleted')
+      navigate('/expenses')
+    },
+    onError: error => notifyError(errorMessage(error)),
+  })
+
   function updateField<K extends keyof ExpenseEditForm>(field: K, value: ExpenseEditForm[K]) {
     setForm(current => current && { ...current, [field]: value })
     setErrors(current => ({ ...current, [field]: '' }))
@@ -162,6 +179,18 @@ export default function ExpenseDetail() {
                   eyebrow="Expense detail"
                   title={expense.data.description}
                   subtitle={`${expense.data.category_name || 'Uncategorized'} - recorded ${formatDate(expense.data.expense_date)}`}
+                  actions={(
+                    <PermissionGate minRole="ADMIN">
+                      <button
+                        type="button"
+                        onClick={() => setDeleteOpen(true)}
+                        className="danger-button"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    </PermissionGate>
+                  )}
                 />
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 16 }}>
@@ -227,6 +256,42 @@ export default function ExpenseDetail() {
                     {history.data && <ActivityFeed title="History" items={historyItems(history.data)} />}
                   </aside>
                 </div>
+
+                <Modal
+                  open={deleteOpen}
+                  onClose={() => setDeleteOpen(false)}
+                  title="Delete expense"
+                  description="This action cannot be undone."
+                  width={440}
+                  footer={(
+                    <>
+                      <button type="button" onClick={() => setDeleteOpen(false)} className="secondary-button">Cancel</button>
+                      <button
+                        type="button"
+                        onClick={() => remove.mutate()}
+                        disabled={remove.isPending}
+                        className="danger-button"
+                        style={{ opacity: remove.isPending ? .7 : 1 }}
+                      >
+                        <Trash2 size={16} />
+                        {remove.isPending ? 'Deleting...' : 'Delete expense'}
+                      </button>
+                    </>
+                  )}
+                >
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{expense.data.description}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '90px minmax(0, 1fr)', gap: 8, fontSize: 13 }}>
+                      <div style={{ color: 'var(--muted)' }}>Amount</div>
+                      <div style={{ fontWeight: 700 }}><MoneyDisplay value={expense.data.amount} /></div>
+                      <div style={{ color: 'var(--muted)' }}>Category</div>
+                      <div style={{ fontWeight: 700 }}>{expense.data.category_name || 'Uncategorized'}</div>
+                      <div style={{ color: 'var(--muted)' }}>Date</div>
+                      <div style={{ fontWeight: 700 }}>{formatDate(expense.data.expense_date)}</div>
+                    </div>
+                  </div>
+                  {remove.isError && <div className="error-banner">{errorMessage(remove.error)}</div>}
+                </Modal>
               </>
             )}
           </div>
