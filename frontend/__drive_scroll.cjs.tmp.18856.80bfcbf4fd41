@@ -1,0 +1,31 @@
+const { chromium } = require('playwright-core');
+
+main().catch(e => { console.log('ERROR:', e.message); process.exit(1); });
+
+async function main() {
+  const browser = await chromium.launch();
+  const context = await browser.newContext({ viewport: { width: 1920, height: 866 } });
+  await context.addCookies([{
+    name: 'sessionid',
+    value: 'yvhf7klzo2ytmy3hcegwh3i06ixi85uc',
+    domain: 'localhost',
+    path: '/',
+  }]);
+  const page = await context.newPage();
+  await page.goto('http://localhost:5173/crm', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: 'dashboard-before-scroll.png' });
+
+  // Confirm scrolling still works
+  await page.evaluate(() => document.querySelector('.app-main')?.scrollTo(0, 400));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'dashboard-scrolled.png' });
+
+  const scrollInfo = await page.evaluate(() => {
+    const el = document.querySelector('.app-main');
+    return el ? { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight } : null;
+  });
+  console.log('scroll info:', JSON.stringify(scrollInfo));
+
+  await browser.close();
+}

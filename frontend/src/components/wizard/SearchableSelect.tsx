@@ -10,6 +10,8 @@ export default function SearchableSelect<T>({
   getLabel,
   renderOption,
   onSelect,
+  onQueryChange,
+  renderEmpty,
   placeholder = 'Search...',
   emptyLabel = 'No results found.',
   error,
@@ -20,6 +22,10 @@ export default function SearchableSelect<T>({
   getLabel: (item: T) => string
   renderOption: (item: T) => ReactNode
   onSelect: (item: T) => void
+  /** Fires on every keystroke — lets a parent drive a server-side search instead of (or alongside) the built-in client-side filter. */
+  onQueryChange?: (query: string) => void
+  /** Overrides the default "no results" block, e.g. to surface a Quick Add action. Receives the current typed query. */
+  renderEmpty?: (query: string) => ReactNode
   placeholder?: string
   emptyLabel?: string
   error?: boolean
@@ -38,12 +44,25 @@ export default function SearchableSelect<T>({
 
   function openDropdown() {
     setQuery('')
+    onQueryChange?.('')
+    setOpen(true)
+  }
+
+  function changeQuery(next: string) {
+    setQuery(next)
+    onQueryChange?.(next)
+    // Typing after a selection (e.g. to search for something else) doesn't
+    // re-focus the input — it's already focused, since selecting an option
+    // deliberately keeps focus there. Without this, `open` stays false and
+    // the displayed value keeps snapping back to the selected label instead
+    // of showing what was just typed.
     setOpen(true)
   }
 
   function select(item: T) {
     onSelect(item)
     setQuery('')
+    onQueryChange?.('')
     setOpen(false)
   }
 
@@ -58,7 +77,7 @@ export default function SearchableSelect<T>({
           value={open ? query : (selected ? getLabel(selected) : '')}
           placeholder={selected && !open ? undefined : placeholder}
           onFocus={openDropdown}
-          onChange={event => setQuery(event.target.value)}
+          onChange={event => changeQuery(event.target.value)}
         />
         <ChevronDown size={15} style={{ position: 'absolute', right: 12, top: 0, bottom: 0, margin: 'auto', color: 'var(--text-faint)', pointerEvents: 'none', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 200ms ease' }} />
       </span>
@@ -84,7 +103,9 @@ export default function SearchableSelect<T>({
             }}
           >
             {filtered.length === 0 && (
-              <div style={{ padding: '14px 12px', color: 'var(--muted)', fontSize: 12.5, textAlign: 'center' }}>{emptyLabel}</div>
+              renderEmpty ? renderEmpty(query) : (
+                <div style={{ padding: '14px 12px', color: 'var(--muted)', fontSize: 12.5, textAlign: 'center' }}>{emptyLabel}</div>
+              )
             )}
             {filtered.map(option => (
               <button

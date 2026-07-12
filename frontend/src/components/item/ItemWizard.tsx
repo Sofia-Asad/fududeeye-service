@@ -19,6 +19,8 @@ import ItemBasicsFields from '@/components/item/ItemBasicsFields'
 import OwnershipFields from '@/components/item/OwnershipFields'
 import PricingFields from '@/components/item/PricingFields'
 import VisibilityFields from '@/components/item/VisibilityFields'
+import QuickAddCustomerModal from '@/components/wizard/QuickAddCustomerModal'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formErrorMessage } from '@/lib/errors'
 import { ATTRIBUTE_FIELDS, CATEGORY_KIND_LABELS, CONDITION_LABELS, compactAttributes } from '@/lib/inventory'
 import { notifyError, notifySuccess } from '@/lib/toast'
@@ -84,6 +86,10 @@ export default function ItemWizard() {
   const [openSection, setOpenSection] = useState<SectionKey | null>('basics')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [forceDraft, setForceDraft] = useState(false)
+  const [customerSearch, setCustomerSearch] = useState('')
+  const debouncedCustomerSearch = useDebouncedValue(customerSearch)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddQuery, setQuickAddQuery] = useState('')
 
   useFocusFirstError(errors, formRef)
 
@@ -93,8 +99,8 @@ export default function ItemWizard() {
   })
 
   const customers = useQuery({
-    queryKey: ['customers', 'item-owner-picker'],
-    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    queryKey: ['customers', 'item-owner-picker', debouncedCustomerSearch],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name', search: debouncedCustomerSearch || undefined }),
     enabled: form.owner_type === 'CONSIGNMENT',
   })
 
@@ -263,7 +269,17 @@ export default function ItemWizard() {
                 isDone={ownershipDone}
                 onToggle={() => toggleSection('ownership')}
               >
-                <OwnershipFields values={form} errors={errors} customers={customers.data?.results ?? []} onChange={updateField} />
+                <OwnershipFields
+                  values={form}
+                  errors={errors}
+                  customers={customers.data?.results ?? []}
+                  onChange={updateField}
+                  onSearchCustomers={setCustomerSearch}
+                  onQuickAddCustomer={query => {
+                    setQuickAddQuery(query)
+                    setQuickAddOpen(true)
+                  }}
+                />
               </AccordionCard>
 
               <AccordionCard
@@ -361,6 +377,13 @@ export default function ItemWizard() {
           </div>
         </div>
       </Modal>
+
+      <QuickAddCustomerModal
+        open={quickAddOpen}
+        initialQuery={quickAddQuery}
+        onClose={() => setQuickAddOpen(false)}
+        onCreated={customer => updateField('owner', String(customer.id))}
+      />
     </div>
   )
 }

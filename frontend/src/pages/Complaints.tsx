@@ -21,6 +21,7 @@ import SummaryCard from '@/components/SummaryCard'
 import AccordionCard from '@/components/wizard/AccordionCard'
 import CustomerSelector from '@/components/wizard/CustomerSelector'
 import SearchableSelect from '@/components/wizard/SearchableSelect'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { errorMessage } from '@/lib/errors'
 import {
   COMPLAINT_PRIORITIES,
@@ -69,6 +70,8 @@ export default function Complaints() {
   const [form, setForm] = useState<ComplaintForm>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [openSection, setOpenSection] = useState<ComplaintSectionKey | null>('customer')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const debouncedCustomerSearch = useDebouncedValue(customerSearch)
 
   useFocusFirstError(errors, formRef)
   useEscapeToClose(modalOpen, () => setModalOpen(false))
@@ -93,8 +96,8 @@ export default function Complaints() {
   })
 
   const customers = useQuery({
-    queryKey: ['customers', 'complaint-picker'],
-    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name' }),
+    queryKey: ['customers', 'complaint-picker', debouncedCustomerSearch],
+    queryFn: () => listCustomers({ is_active: true, ordering: 'full_name', search: debouncedCustomerSearch || undefined }),
     enabled: modalOpen,
   })
 
@@ -284,6 +287,7 @@ export default function Complaints() {
                 customers={customers.data?.results ?? []}
                 value={form.customer}
                 onSelect={customer => updateField('customer', String(customer.id))}
+                onSearch={setCustomerSearch}
                 error={!!errors.customer}
               />
             </Field>

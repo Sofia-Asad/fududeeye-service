@@ -8,7 +8,7 @@ import { ICON_TONE_CLASSES, type IconTone } from '@/lib/toneStyles'
 import { cn } from '@/lib/utils'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 
-const CONTACT_WHATSAPP_MESSAGE = "Hi Fududeeye, I'd like to get in touch."
+const CONTACT_WHATSAPP_MESSAGE = 'Hello Fududeeye,\n\nI am contacting you through the Fududeeye Marketplace website. I would like to get more information about your brokerage and marketplace services.\n\nPlease assist me when available. Thank you.'
 
 const CARDS: { icon: typeof Phone; tone: IconTone; title: string; value: ReactNode }[] = [
   {
