@@ -6,17 +6,22 @@ Fududeeye connects people who want to sell second-hand goods, real estate, and v
 
 ## Table of Contents
 
-- [What This System Does](#what-this-system-does)
-- [Key Features](#key-features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Core Modules](#core-modules)
-- [Roles & Permissions](#roles--permissions)
-- [Core Business Logic](#core-business-logic)
-- [Getting Started](#getting-started)
-- [Testing](#testing)
-- [Known Limitations](#known-limitations)
-- [Team](#team)
+- [Fududeeye](#fududeeye)
+  - [Table of Contents](#table-of-contents)
+  - [What This System Does](#what-this-system-does)
+  - [Key Features](#key-features)
+  - [Architecture](#architecture)
+  - [Tech Stack](#tech-stack)
+  - [Core Modules](#core-modules)
+  - [Roles \& Permissions](#roles--permissions)
+  - [Core Business Logic](#core-business-logic)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Backend](#backend)
+    - [Staff CRM](#staff-crm)
+    - [Public Marketplace](#public-marketplace)
+  - [Testing](#testing)
+  - [Known Limitations](#known-limitations)
 
 ## What This System Does
 
@@ -172,13 +177,7 @@ Current status:
 - Single currency (USD) and English-only interface.
 - No native mobile app; no automated image-based item verification.
 
-## Team
 
-- Sofia Asad Abdukadir
-- Fatima Ahmed Jama
-- Deka Mohamud Abdi
-- Emaan Abirixman Omar
 
-East Africa University, Galkacyo Campus — Faculty of Information Science and Technology, Department of Computer Science.
 
-Supervisor: Ibrahim Mohamud Abdirihman
+
