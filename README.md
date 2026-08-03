@@ -1,10 +1,24 @@
 # Fududeeye
 
-A brokerage-mediated public marketplace and role-based Customer Relationship Management (CRM) system, built for Fududeeye, a consignment and inventory brokerage in Galkayo, Somalia.
+A brokerage-mediated public marketplace and role-based CRM for **Fududeeye**, a consignment and inventory brokerage in Galkayo, Somalia.
 
 Fududeeye connects people who want to sell second-hand goods, real estate, and vehicles with people who want to buy them — but unlike a plain classifieds board, nothing reaches the public site until staff verify it, and every transaction is staff-mediated end to end.
 
-## What this system does
+## Table of Contents
+
+- [What This System Does](#what-this-system-does)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Core Modules](#core-modules)
+- [Roles & Permissions](#roles--permissions)
+- [Core Business Logic](#core-business-logic)
+- [Getting Started](#getting-started)
+- [Testing](#testing)
+- [Known Limitations](#known-limitations)
+- [Team](#team)
+
+## What This System Does
 
 Fududeeye supports two ownership models side by side:
 
@@ -13,29 +27,39 @@ Fududeeye supports two ownership models side by side:
 
 Every action taken in the system — every create, update, and delete — is written to an immutable audit log that cannot be edited or deleted, not even by an Admin account.
 
-## Project structure
+## Key Features
+
+- **Staff-mediated marketplace** — the public site only ever shows items staff have explicitly approved; there's no self-serve listing.
+- **Dual ownership accounting** — company-stock and consignment items are tracked and paid out differently, computed once at time of sale and never silently recalculated.
+- **Immutable audit log** — every create/update/delete is logged at the database level; the log itself cannot be edited or deleted by any role.
+- **Role-based permissions** — Admin / Manager / Sales roles gate not just UI visibility but actual API-level access to sensitive fields like cost price and profit.
+- **Demand matching** — customer want-lists are matched live against current inventory, and a sale automatically fulfills a matched demand.
+- **Lead-to-customer pipeline** — public marketplace inquiries convert into real CRM customer records with one action.
+
+## Architecture
 
 ```
 fududeeye/
 ├── backend/          Django REST Framework API — the single source of truth
 ├── frontend/         Internal Brokerage CRM (staff only, session-authenticated)
-├── marketplace/       Public marketplace (anonymous browsing, no account needed)
-└── design_handoff_fududeeye_redesign/   Design reference files
+└── marketplace/      Public marketplace (anonymous browsing, no account needed)
 ```
 
-Both frontends are independent React single-page applications that talk to the same Django REST API. There is one integration point between the public and staff-facing halves of the system: an `Item.status` field. The public API only ever returns items where `status = ACTIVE`. There is no separate publish step — changing an item's status inside the CRM instantly changes what the public site shows.
+Both frontends are independent React single-page applications that talk to the same Django REST API. There is exactly one integration point between the public and staff-facing halves of the system: the `Item.status` field. The public API only ever returns items where `status = ACTIVE`. There is no separate publish step — changing an item's status inside the CRM instantly changes what the public site shows.
 
-## Tech stack
+In development, the marketplace's Vite dev server reverse-proxies `/crm/*` to the CRM's own dev server, so both apps appear to live at one origin.
+
+## Tech Stack
 
 **Backend**
 - Python 3.13
-- Django 5.1 + Django REST Framework 3.15
+- Django 5.1+ · Django REST Framework 3.15+
 - Session-cookie authentication with a custom `User` model (`role`: Admin / Manager / Sales)
 - django-filter, django-cors-headers, Pillow
 - SQLite (development) → PostgreSQL via psycopg2 (production), same Django ORM models, environment-driven config via python-decouple
 
 **Frontend (both apps)**
-- React 19.2 + TypeScript, built with Vite 8
+- React 19 + TypeScript, built with Vite
 - TanStack Query 5 (data fetching/caching)
 - React Router 7 (routing)
 - React Hook Form 7 + Zod 4 (forms/validation)
@@ -43,7 +67,7 @@ Both frontends are independent React single-page applications that talk to the s
 - Axios (HTTP client)
 - Styling: Tailwind CSS 3.4 + class-variance-authority (marketplace); hand-authored CSS custom properties (CRM)
 
-## Core modules
+## Core Modules
 
 | Module | What it does |
 |---|---|
@@ -58,7 +82,7 @@ Both frontends are independent React single-page applications that talk to the s
 | Reports | Sales/profit/expense breakdowns, demand-vs-supply, audit log viewer |
 | User Management | Admin-only. Staff accounts are deactivated, never hard-deleted |
 
-## Roles and permissions
+## Roles & Permissions
 
 | Capability | Sales Staff | Manager | Admin |
 |---|---|---|---|
@@ -70,7 +94,7 @@ Both frontends are independent React single-page applications that talk to the s
 | Manage staff accounts | ❌ | ❌ | ✅ |
 | Hard-delete a record | ❌ | ❌ | ✅ (rare) |
 
-## Core business logic
+## Core Business Logic
 
 ```
 Consignment:
@@ -84,7 +108,11 @@ Company stock:
 
 Both are computed once, in the backend, at the moment a sale is created, and are never recalculated afterward.
 
-## Getting started
+## Getting Started
+
+### Prerequisites
+- Python 3.13+
+- Node.js 20+ and npm
 
 ### Backend
 
@@ -117,8 +145,6 @@ cp .env.example .env
 npm run dev                       # http://localhost:5174
 ```
 
-In development, the CRM is reverse-proxied under `/crm/*` behind the marketplace's dev server, so both apps appear to live at one origin.
-
 ## Testing
 
 ```bash
@@ -126,20 +152,20 @@ cd backend
 pytest
 ```
 
-The backend test suite covers all nine apps — `accounts`, `customers`, `inventory`, `sales`, `demands`, `complaints`, `finance`, `marketplace`, `reports` — with roughly 2,450 lines of test code exercising permission rules, model validation, and API behaviour.
+The backend test suite covers all ten apps — `accounts`, `complaints`, `core`, `customers`, `demands`, `finance`, `inventory`, `marketplace`, `reports`, `sales` — with roughly 3,160 lines of test code exercising permission rules, model validation, and API behaviour.
 
 Current status:
 
 | Check | Result |
 |---|---|
-| Automated backend tests | 133 / 133 passed |
+| Automated backend tests | 177 / 177 passed |
 | `python manage.py check` | 0 issues |
 | Migrations | No pending or missing migrations |
 | CRM frontend type-check | 0 errors |
 | Marketplace frontend type-check | 0 errors |
 | Production build, both frontends | Succeed cleanly |
 
-## Known limitations
+## Known Limitations
 
 - No online payment processing — all payments (cash, EVC Plus, Zaad, bank transfer) are settled off-platform and recorded manually.
 - No buyer accounts on the public marketplace — a deliberate design choice, not a gap, since every serious transaction is routed through staff.
@@ -155,4 +181,4 @@ Current status:
 
 East Africa University, Galkacyo Campus — Faculty of Information Science and Technology, Department of Computer Science.
 
-Supervisor: ibrahim Mohamud Abdirihman
+Supervisor: Ibrahim Mohamud Abdirihman

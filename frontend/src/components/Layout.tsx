@@ -300,7 +300,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
 
         <div style={{ display: 'flex', flex: 1, flexDirection: 'column', justifyContent: 'space-between', minHeight: 0, padding: '0 12px 14px' }}>
-          <nav style={{ display: 'grid', gap: 22, overflowY: 'auto', paddingRight: 2 }}>
+          <nav className="sidebar-nav" style={{ display: 'grid', gap: 22 }}>
             {visibleGroups.map(group => (
               <div key={group.label}>
                 {!collapsed && (
