@@ -3,6 +3,11 @@ from decouple import config, Csv
 
 DEBUG = False
 
+# base.py falls back to an insecure placeholder if DJANGO_SECRET_KEY isn't
+# set (fine for local dev). In production that must fail loudly instead of
+# silently booting with a public, well-known key.
+SECRET_KEY = config('DJANGO_SECRET_KEY')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

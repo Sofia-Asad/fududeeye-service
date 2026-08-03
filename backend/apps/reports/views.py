@@ -256,13 +256,14 @@ def demand_vs_supply(request):
     demands = Demand.objects.select_related('customer', 'category').filter(status=Demand.Status.OPEN)
     rows = []
     for demand in demands:
-        matches = list(demand.suggest_matches()[:5])
+        all_matches = list(demand.suggest_matches())
+        matches = all_matches[:5]
         rows.append({
             'demand_id': demand.pk,
             'customer': demand.customer.full_name,
             'title': demand.title,
             'category': demand.category.name if demand.category else None,
-            'match_count': demand.suggest_matches().count(),
+            'match_count': len(all_matches),
             'matches': [
                 {
                     'id': item.pk,
